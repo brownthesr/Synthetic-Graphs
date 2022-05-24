@@ -10,12 +10,11 @@ Paper we have found in the Lit Search:
 
   SuperGAT - Proposes a variant of the GAT to learn transductive graphs better. They use Networkx to develop a SSBM(Symmetric Stochastic Block Model) to run the model on. They use overlapping Gaussian Distributions to generate features based on class. They are mainly focused on the model
 
-Covariate Regularized Community Detection in Sparse Graphs - They use a version of SBM to generate random
-	feature vectors with covariates. They specifically focus on sparse graphs.
+	Covariate Regularized Community Detection in Sparse Graphs - They use a version of SBM to generate random feature vectors with covariates. They specifically focus on sparse graphs.
 
-New Benchmarks for Learning on Non-Homophilous Graphs- Proposes that GNN's should be trained on specific heterophilous graphs. They only mention synthetic graphs
+	New Benchmarks for Learning on Non-Homophilous Graphs- Proposes that GNN's should be trained on specific heterophilous graphs. They only mention synthetic graphs
 
-Robustness of Community Detection to Random Geometric Perturbations - They show that spectral methods are robust to some types of noise. They use an SBM
+	Robustness of Community Detection to Random Geometric Perturbations - They show that spectral methods are robust to some types of noise. They use an SBM
 
 Things we should search for: ?
  
