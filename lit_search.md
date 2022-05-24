@@ -1,4 +1,4 @@
-Paper we have found in the Lit Search:
+# Paper we have found in the Lit Search:
 
 	Page rank - Proposes a new clustering method: PageRank. It uses cSBM's, but they are not main focus of paper
 	cSBM - Proposes a graph generation tactic. They generate a graph with two two distinct clusters of the same size. They use specific hyper parameters to tune structure and feature similarity between clusters. Features are generated independently according to Gaussian random. The whole paper is focused on this new model.
@@ -15,5 +15,5 @@ Paper we have found in the Lit Search:
 
 	Robustness of Community Detection to Random Geometric Perturbations - They show that spectral methods are robust to some types of noise. They use an SBM
 
-Things we should search for: ?
+# Things we should search for: ?
  
