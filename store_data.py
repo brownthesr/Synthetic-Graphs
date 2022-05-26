@@ -120,6 +120,8 @@ def generate_cSBM(d,lamb,mu,num_features,num_nodes,num_classes):
 from torch_geometric.nn import GCNConv
 import torch.nn as nn
 import torch.nn.functional as F
+from copy import deepcopy
+import copy
 class GCN(torch.nn.Module):# this is the torch geometric implementation of our GCN model like before, it
     # is a lot simpler to implement and way customizeable
     def __init__(self, in_feat, hid_feat, out_feat):
@@ -180,8 +182,12 @@ edge_list = torch.Tensor(edge_list).to(torch.long)
 b = torch.Tensor(b)
 labels = torch.Tensor(labels).to(torch.long)
 
-test_accs = []
-for i in range(100):
+models = [0,1,2,3,4,5,6,7,8,9]
+find_models= True
+models_found = 0
+all_accs = []
+sub_accs = []
+while find_models:
     adj, features, labels = generate_cSBM(d,lamb,mu,num_features,num_nodes,num_classes)
     edge_list = adj_to_list(adj)
 
@@ -210,6 +216,54 @@ for i in range(100):
     model.eval()
     out = model(features,edge_list)
     test_acc = accuracy(out.max(1)[1],torch.ones(num_nodes).to(torch.bool))
-    test_accs.append(test_acc)
-    print(f"test number : {i} test acc: {test_acc}")
-    np.savetxt("random_sbm_tests.txt",test_accs)
+    for i in range(10):
+        if type(models[i]) == int and i != 0 and i != 2:
+            if test_acc > .1*i and test_acc < .1*(i+1):
+                models[i] = copy.deepcopy(model)
+                print(test_acc)
+                models_found += 1
+                sub_accs.append(test_acc)
+    if(models_found >= 8):
+        find_models = False
+        all_accs.append(sub_accs)
+models = [models[1]] + models[3:]
+models = np.array(models)
+transfer_epochs = 10
+for i in range(200):
+    adj, features, labels = generate_cSBM(d,lamb,mu,num_features,num_nodes,num_classes)
+    edge_list = adj_to_list(adj)
+
+    # sets up model/optimizer
+    model = GCN(num_features,hidden_layers,num_classes)
+    optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
+
+    # creates some masks so we have stuff for training and validation
+    train_mask = torch.tensor([False,True]).repeat(num_nodes//2)
+    val_mask = ~train_mask
+
+    # turns all of our tensors into the desired format
+    edge_list = torch.Tensor(edge_list).to(torch.long)
+    features = torch.Tensor(features)
+    labels = torch.Tensor(labels).to(torch.long)
+    sub_accs = []
+    for imodel in models:
+        model = copy.deepcopy(imodel)
+        model.train()# tells our model we are about to train
+        for epoch in range(transfer_epochs):# runs through all the data 200 times
+            optimizer.zero_grad()
+            out = model(features,edge_list)
+
+            train_loss = F.nll_loss(out[train_mask], labels[train_mask])        
+            train_loss.backward()
+            optimizer.step()
+
+        model.eval()
+        out = model(features,edge_list)
+        test_acc = accuracy(out.max(1)[1],torch.ones(num_nodes).to(torch.bool))
+        sub_accs.append(test_acc)
+    all_accs.append(sub_accs)
+    print(f"time : {i} sub_accuracies: {sub_accs}")
+
+    np.savetxt("sbm_gnn_transfer",np.array(all_accs))
+
+
