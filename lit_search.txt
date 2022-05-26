@@ -24,6 +24,9 @@ They specifically focus on sparse graphs.
 They only mention synthetic graphs
 
 	Robustness of Community Detection to Random Geometric Perturbations - They show that spectral methods are robust to some types of noise. They use an SBM
+	
+	Stochastic block models with multiple continuous attributes - They generate a stochastic block model that effectively computes continous attributes,
+They then use this model to aid link prediction in some protein datasets
 
 # Things we should search for: ?
  
