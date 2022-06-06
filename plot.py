@@ -1,48 +1,37 @@
 import matplotlib.pyplot as plt
 import numpy as np
+plt.figure()
 
-# Fixing random state for reproducibility
+compare = False
 
-fig = plt.figure()
-ax = plt.axes(projection="3d")
+test_accs = np.genfromtxt("mu_lambda_variations_GCN.txt")
+test_accs_vanilla = np.genfromtxt("mu_lambda_variations_NN.txt")
 
-rows = 50
-cols = 8
-num_bars = rows*cols
-x_pos = np.linspace(.14,.9,cols).tolist()*rows
-y_pos = np.repeat(np.arange(rows),cols)
-z_pos = [0] * num_bars
-x_size = np.ones(num_bars)/8/1.5
-y_size = np.ones(num_bars)/1.5
-z_size = np.genfromtxt("sbm_gnn_transfer.txt")
-ax.set_xlabel("initial run accuracy")
-ax.set_ylabel("differing random graphs")
-ax.set_zlabel("overall accuracy")
 
-order_all = True
-order_biggest = False
-#z_size = z_size[:rows]
-if(order_all):
-    for i in range(cols):
-        ordering = z_size[:,i]
-        idx = np.flip(np.argsort(ordering))
-        z_size[:,i] = z_size[idx,i]
-if order_biggest:
-    ordering = z_size[:,7]
-    idx = np.flip(np.argsort(ordering))
-    z_size = z_size[idx]
-averages = np.sum(z_size,axis = 0)/200
-print(averages)
-start = 0*8
 
-z_size = z_size.flatten()[:num_bars]
-colors = ["r","k","b","y","g","m","c","orange"]*rows
-#change = z_size[0,:8]
-#print(change)
-#idx = np.argsort(change)
-#z_size[0,:8] = change[idx]
-#print(z_size[0],idx,change)
-#np.savetxt("sbm_gnn_transfer.txt",z_size)
-ax.bar3d(x_pos, y_pos, z_pos, x_size, y_size, z_size, color=colors)
+x = test_accs[:,1]# lambda
+z = test_accs[:,0] #accs
+z = z.reshape(200,61)
+x = x.reshape(200,61)
+y = test_accs[:,2]# mu
+
+y = y.reshape(200,61)
+new_Z = np.zeros((200,61))
+for i in range(200):
+    new_Z[i] = z[i] - test_accs_vanilla[i][0]
+if compare:
+    z = new_Z
+
+plt.xlabel("edge info - normalized degree separation")# normalized degree separation, lambda
+plt.ylabel("feature info - cloud distance from origin")#  mean featue separation, mu#
+
+colors = []
+for a in z:
+
+    colors.append((2*a-1,2-2*a,.5))
+plt.scatter(x,y,c=z,cmap="coolwarm")
+plt.colorbar()
+if compare:
+    plt.clim(-.4,.4)
 
 plt.show()
