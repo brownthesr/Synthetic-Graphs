@@ -28,5 +28,9 @@ They only mention synthetic graphs
 	Stochastic block models with multiple continuous attributes - They generate a stochastic block model that effectively computes continous attributes,
 They then use this model to aid link prediction in some protein datasets
 
+	Investigating Transfer Learning with GNNs - They show that GNN's do carry some transferability, but it varies depending on the GNN. They show that similarity
+in community structure also aids in transferability. They introduce various notions to characterize transferability such as jumpstart(how much better a transfered gnn performs initially compared to a random initialized GNN), transfer-ratio(the difference in the AUC of the transfered GNN and random GNN), and Asymptotic Performance
+(How much better the trained GNN does eventually compared to the random GNN).
+
 # Things we should search for: ?
  
