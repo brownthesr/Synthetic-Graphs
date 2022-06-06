@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.figure()
 
-compare = False
+compare = False# this is for the comparison of the two methods
 
 test_accs = np.genfromtxt("mu_lambda_variations_GCN.txt")
 test_accs_vanilla = np.genfromtxt("mu_lambda_variations_NN.txt")
