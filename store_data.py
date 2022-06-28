@@ -3,6 +3,7 @@ import torch
 import networkx as nx
 import matplotlib.pyplot as plt
 from itertools import permutations,combinations,combinations_with_replacement
+from scipy.stats import poisson
 
 def generate_SSBM(n,c,p_intra,p_inter):# generates a symmetric SBM
     """This is similar to the above SBM but in this case it is symmetric"""
@@ -137,11 +138,158 @@ def generate_cSBM_modified(d,lamb,o_distance,num_features,num_nodes,num_classes)
         test_b[i] = dist*(np.diag(perms[test_v[i]])@u) + test_Z[i]/np.sqrt(num_features)
     
     return train_adj,train_b,train_communities, test_adj,test_b,test_communities
-from torch_geometric.nn import GCNConv
+
+def DC_SBM_adj(num_nodes,num_groups,communities,degree_distribution,group_edge_avg):
+    """
+    Generates a Degree-Corrected Stochastic Block Model
+    
+    We loop through each group-on-group interaction and compute edges there using a poisson distribution 
+    and weighting it according to the expected degrees
+
+    Parameters
+    ----------
+    num_nodes : int (N)
+        the number of nodes in the graph
+    num_groups : int
+        the number of groups
+    communities : list of size N
+        a list assigning each node a group
+    degree_distribution : list of size N
+        controls the expected degree for any node in the graph. should all sum to 1 for each group
+    group_edge_avg : matrix of size num_groups x num_groups
+        details the expected number of edges between two groups
+    
+    Returns
+    -------
+    NumPy Array N x N
+        The adjacency matrix of the new SBM
+    """
+    N = num_nodes
+    w = group_edge_avg
+    theta = np.array(degree_distribution)
+    adj = np.zeros((N,N))
+    total_edges = 0
+    expected_degrees = degree_distribution
+    actual_degrees = np.zeros_like(expected_degrees)
+    group_edge_avg = group_edge_avg.astype(float)
+    for i in range(num_groups):
+        for j in range(i+1):
+            # in this we calculuate the expected number of edges between any two groups
+            if i != j:
+                num_edges = poisson.rvs(group_edge_avg[i,j])
+            else:
+                num_edges = poisson.rvs(group_edge_avg[i,j])
+
+            group_i = np.where(communities == i)[0]
+            group_j = np.where(communities == j)[0]
+            a = (group_edge_avg[i,j]/group_edge_avg[i].sum())
+            for k in group_i:
+                distribution_j = expected_degrees[group_j]-actual_degrees[group_j]
+                if((expected_degrees[group_j]-actual_degrees[group_j]).sum() <=.1):# if we have run out of degrees we want to stop adding them
+                    break
+                without_k = distribution_j[group_j != k]
+                distribution_j = distribution_j[group_j != k]/distribution_j[group_j != k].sum()# we make a distribution to pull from
+                deg_k = int((expected_degrees[k]-actual_degrees[k])*(num_edges/group_edge_avg[i].sum()))# we scale how many degrees we want to
+                # add by how many edges are expected to go out of this cluster
+                deg_k = np.min([deg_k,np.count_nonzero(without_k)])
+                if(deg_k == 0):
+                    continue
+                sampled_nodes = np.random.choice(group_j[group_j != k],size=deg_k,p=distribution_j,replace=False)# sample the nodes
+                
+                actual_degrees[sampled_nodes] += 1
+                actual_degrees[k] += deg_k
+                start_points = np.full(deg_k,k)
+                adj[start_points,sampled_nodes] = 1
+                
+    #print(np.sqrt(((expected_degrees-actual_degrees)**2).sum()))
+    adj = adj + adj.T
+    return adj
+
+def get_features(num_nodes,num_features,num_classes,mu,communities):
+    u = np.random.normal(0,1/num_features,(num_features)) # obtains the random normal vector u
+    Z = np.random.normal(0,.2,(num_nodes,num_features)) # obtains the random noise vector i presume
+    v = communities # puts the groups into a format for the equations
+    
+    perms = generate_perms_rand(num_classes,num_features)
+    b = np.zeros((num_nodes,num_features))
+    for i in range(num_nodes):
+        b[i] = np.sqrt(mu/num_nodes)*(np.diag(perms[v[i]])@u) + Z[i]/np.sqrt(num_features)
+    return b
+
+def DC_SSBM(num_nodes,num_groups,num_features,lamb,mu):
+    """
+    Generates a Degree Corrected Stochastic Block Model with Features
+    
+    We first assign communities to each node, then we assign them degrees(generated randomly) from
+    a powerlaw distribution. Following this we obtain w(a parameter used to calculate edges in the SBM)
+    using the degrees. Then we obtain the adjacency matrix and the features usign other methods
+    """
+    # assign communities to all of our nodes
+    community = np.repeat(list(range(num_groups)),np.ceil(num_nodes/num_groups))
+    communities = community[:num_nodes]
+
+    # get expected degrees for each node according to a powerlaw distribution
+    p = np.arange((num_nodes)/num_groups-1) + 1# here we make the assumption that the degree of a node won't surpass the number of nodes
+                                            # within it's respective group
+    p = 1/(p*p)
+    p = p/p.sum() 
+    degrees = np.random.choice(np.arange(num_nodes/num_groups-1) + 1, size = (num_nodes), p = p)
+
+    # we sort degrees according to their groups then obtain total degrees for each group
+    theta = degrees.copy()
+    theta = theta.reshape(num_groups,num_nodes//num_groups)
+    group_deg = theta.sum(axis=1)
+    theta = np.sort(theta)
+    theta = theta.flatten()
+    
+    num_edges = sum(group_deg)/2
+
+    group_deg = np.array(group_deg)/2# we want it to be half, empiraclly this makes our model work how it is supposed to
+
+    # obtain w as a mix between planted and random graphs
+    w_planted = np.diag(group_deg)
+    w_random = np.outer(group_deg,group_deg)/(2*num_edges)# not sure if this is normalized as we want it
+    w = lamb*w_planted + (1-lamb)*w_random
+
+    # obtain our adjacency matrix along with the corrosponding features
+    adj = DC_SBM_adj(num_nodes,num_groups,communities,theta, w)
+    #features = get_features(num_nodes,num_features,num_groups,mu,communities)
+
+    #README the feature generation does not take class size into account, or community ordering. If you wanted
+    # to specify this you could.
+    return adj,communities
+    
+def generate_DC_SBM(num_nodes,num_groups,num_features,lamb,mu):
+
+    u = np.random.normal(0,1/num_features,(num_features)) # obtains the random normal vector u how far our clouds are from the origin
+
+    train_adj, train_communities = DC_SSBM(num_nodes,num_classes,num_features,lamb,mu) # obtains the graph structure
+    train_Z = np.random.normal(0,.2,(num_nodes,num_features)) # obtains the random noise vector i presume
+    train_v = train_communities # puts the groups into a format for the equations
+    
+    perms = generate_perms_rand(num_classes,num_features)
+    #print(communities)
+    #print(perms)
+    dist = mu
+    train_b = np.zeros((num_nodes,num_features))
+    for i in range(num_nodes):
+        train_b[i] = dist*(np.diag(perms[train_v[i]])@u) + train_Z[i]/np.sqrt(num_features)
+        
+    # recompute all this but for a test set
+    test_adj, test_communities = DC_SSBM(num_nodes,num_classes,num_features,lamb,mu)# change graph structure
+    test_Z = np.random.normal(0,.2,(num_nodes,num_features)) # change the noise vector, but don't change the community centers
+    test_b = np.zeros((num_nodes,num_features))
+    test_v = test_communities
+    for i in range(num_nodes):
+        test_b[i] = dist*(np.diag(perms[test_v[i]])@u) + test_Z[i]/np.sqrt(num_features)
+    
+    return train_adj,train_b,train_communities, test_adj,test_b,test_communities
+from torch_geometric.nn import GCNConv, GATConv,SAGEConv
 import torch.nn as nn
 import torch.nn.functional as F
 from copy import deepcopy
 import copy
+
 
 class GCN(torch.nn.Module):# this is the torch geometric implementation of our GCN model like before, it
     # is a lot simpler to implement and way customizeable
@@ -180,7 +328,10 @@ d=10 # this is the average degree
 lamb = 0 # difference in edge_densities, 0 indicates only node features are informative lamb>0 means more intra edges vs inter edges(homophily)
 # lamb < 0 means less intra edges vs inter edges(heterophily)
 #lamb = 3.15
-mu = 0# difference between the means of the two classes, increasing this means increasing difference between class features
+import sys
+comp_id = int(sys.argv[1])
+max_comps = 1.0
+mu = 0 + 6.0/max_comps * comp_id# difference between the means of the two classes, increasing this means increasing difference between class features
 a = 0
 num_nodes = 1000
 num_features = 80
@@ -195,39 +346,39 @@ epochs = 400
 
 runs = 120
 all_accs = []
-for a in range(200):# repeat this untill our mu reaches 0
+while mu < 6/max_comps*(comp_id+1)-.01:# repeat this untill our mu reaches 0
     #for lamb_i in range(runs):
     avg = 0
     lamb_i = 0# this just tells us if we can start tracking averages
     lamb = 0# we need to reset lambda every loop
-    while lamb < 3:# repeat this loop until our value of lambda can solve exact recovery
+    while lamb <= 1:# repeat this loop until our value of lambda can solve exact recovery
         if lamb_i  > 5:
             computing_accs = np.array(all_accs)
             avg = computing_accs[-5:,0].mean()
         lamb_i += 1
-        train_adj, train_b, train_labels,test_adj,test_b,test_labels = generate_cSBM_modified(d,lamb,mu,num_features,num_nodes,num_classes)
+        train_adj, train_b, train_labels,test_adj,test_b,test_labels = generate_DC_SBM(num_nodes,num_classes,num_features,lamb,mu)
         
 
         # sets up model/optimizer
         model = GCN(num_features,hidden_layers,num_classes)
-        model.cuda()
+        model
         optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
 
         # creates some masks so we have stuff for training and validation
-        train_mask = torch.ones(num_nodes).bool().cuda()
+        train_mask = torch.ones(num_nodes).bool()
         #train_mask = train_mask[np.random.permutation(num_nodes)]
-        test_mask = torch.ones(num_nodes).bool().cuda()
+        test_mask = torch.ones(num_nodes).bool()
 
         # turns all of our tensors into the desired format
         train_edge_list = adj_to_list(train_adj)
-        train_edge_list = torch.Tensor(train_edge_list).to(torch.long).cuda()
-        train_b = torch.Tensor(train_b).cuda()
-        train_labels = torch.Tensor(train_labels).to(torch.long).cuda()
+        train_edge_list = torch.Tensor(train_edge_list).to(torch.long)
+        train_b = torch.Tensor(train_b)
+        train_labels = torch.Tensor(train_labels).to(torch.long)
 
         test_edge_list = adj_to_list(test_adj)
-        test_edge_list = torch.Tensor(test_edge_list).to(torch.long).cuda()
-        test_b = torch.Tensor(test_b).cuda()
-        test_labels = torch.Tensor(test_labels).to(torch.long).cuda()
+        test_edge_list = torch.Tensor(test_edge_list).to(torch.long)
+        test_b = torch.Tensor(test_b)
+        test_labels = torch.Tensor(test_labels).to(torch.long)
 
 
         model.train()# tells our model we are about to train
@@ -244,7 +395,7 @@ for a in range(200):# repeat this untill our mu reaches 0
         test_acc = accuracy(out.max(1)[1],test_mask,test_labels)
         all_accs.append([test_acc,lamb,mu])
         print("test_acc: ", test_acc,"lambda:",lamb,"mu:",mu)
-        np.savetxt("change_lambda_sublinearscale.txt",all_accs)
+        np.savetxt(f"DC_SBM_GCN({comp_id}).txt",all_accs)
         lamb +=.05
-    mu = .03*a
+    mu +=.03
 
