@@ -1,0 +1,4 @@
+*.egg-info
+data
+scripts/xor_data.py
+tests/work_bench.py
