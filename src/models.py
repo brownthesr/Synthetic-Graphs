@@ -1,14 +1,22 @@
+"""
+Contains all of the models that we want to run over our data.
+GCN/GAT/SAGE, NN, and GCNModified(specifying where to add
+comvolutions)
+"""
 from torch_geometric.nn import GCNConv, GATConv,SAGEConv
 from torch_geometric.nn import DenseGCNConv
 import torch.nn as nn
 import torch.nn.functional as F
-from copy import deepcopy
-import copy
 import torch
 
-class GCN(torch.nn.Module):# this is the torch geometric implementation of our GCN model like before, it
-    # is a lot simpler to implement and way customizeable
+class GCN(torch.nn.Module):
+    """
+    Pytorch_Geometric implementation of GCN
+    """
     def __init__(self, in_feat, hid_feat, out_feat):
+        """
+        Constructor of class
+        """
         super().__init__()
         self.conv1 = GCNConv(in_feat, hid_feat)
         #self.convh = GCNConv(hid_feat,hid_feat)
@@ -17,6 +25,9 @@ class GCN(torch.nn.Module):# this is the torch geometric implementation of our G
         #self.dropout = nn.Dropout(p=.4)
 
     def forward(self, x,edge_index):
+        """
+        Runs forward propagation
+        """
         x = self.activation(self.conv1(x, edge_index))
         x = F.dropout(x, training= self.training)
         #x = self.activation(self.convh(x,edge_index))
@@ -25,13 +36,22 @@ class GCN(torch.nn.Module):# this is the torch geometric implementation of our G
         return F.log_softmax(x,dim=1)
 
 class NN(torch.nn.Module):
+    """
+    Vanilla Neural Net implementation with torch
+    """
     def __init__(self, in_feat, hid_feat, out_feat):
+        """
+        Constructor of class
+        """
         super().__init__()
         self.lin1 = nn.Linear(in_feat, hid_feat)
         self.lin2 = nn.Linear(hid_feat, out_feat)
         self.activation = nn.ReLU()
 
     def forward(self, x):
+        """
+        Runs forward propagation
+        """
         x = self.activation(self.lin1(x))
         x = F.dropout(x, training= self.training)
         x = self.lin2(x)

@@ -1,16 +1,26 @@
+"""
+This module contains helpful functions to aid in readability
+and mundane tasks
+"""
 import numpy as np
 from matplotlib import pyplot as plt
 import networkx as nx
-def adj_to_list(a):
-    adjList =[[],[]]
-    for i in range(len(a)):
-        for j in range(len(a[i])):
-            if a[i][j]== 1:
-                adjList[0].append(i)
-                adjList[1].append(j)
-    return adjList
+def adj_to_list(adj):
+    """
+    Converts adjacency matrix into an edge list
+    """
+    adj_list =[[],[]]
+    for i, row in enumerate(adj):
+        for j, item in enumerate(row):
+            if item== 1:
+                adj_list[0].append(i)
+                adj_list[1].append(j)
+    return adj_list
 
-def accuracy(preds,mask,labels):# obtains the accuracy of the model
+def accuracy(preds,mask,labels):
+    """
+    Obtains the accuracy of a model
+    """
     correct = (preds[mask] == labels[mask]).sum()
     acc = int(correct)/int(mask.sum())
     return acc
@@ -22,7 +32,7 @@ def draw_graph(adj,communities,feat):
     This assigns colors according to the communities. Warning -
     does not work well for graphs of over 500 nodes. Additionally
     parameters only color nodes up to 4 different groups, additional
-    coloring can be added. Isolated nodes are removed to enhance 
+    coloring can be added. Isolated nodes are removed to enhance
     visibility.
 
     Parameters
@@ -32,14 +42,14 @@ def draw_graph(adj,communities,feat):
     communities : list of size (num_nodes)
         The community assignments
     """
-    g = nx.from_numpy_array(adj)
-    isos = list(nx.isolates(g))
+    graph = nx.from_numpy_array(adj)
+    isos = list(nx.isolates(graph))
     mask = np.ones(len(communities), dtype=bool)
     mask[isos] = False
     #print(nx.number_of_isolates(g)) # used for debugging
     communities = communities[mask]
-    g.remove_nodes_from(isos)
-    g.remove_edges_from(nx.selfloop_edges(g))
+    graph.remove_nodes_from(isos)
+    graph.remove_edges_from(nx.selfloop_edges(graph))
     colors = ["yellow"]*400
     colors = np.array(colors)
     colors[np.where(communities == 0)] = "green"
