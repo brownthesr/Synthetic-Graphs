@@ -1,21 +1,27 @@
 """
 This is to store all the data generation functions
 """
-from itertools import permutations,combinations,combinations_with_replacement
+from itertools import permutations,combinations_with_replacement
 import numpy as np
-import torch
-import networkx as nx
-import matplotlib.pyplot as plt
 from scipy.stats import poisson
 from scipy.stats import bernoulli
 
 def gen_stoney_sbm(num_nodes,power_law,num_classes,p_intra,p_inter):
-    """
-    Gnerates a degree-corrected SBM in a more efficient manner
+    """Generates a DC_SBM the way stoney proposed
 
-    Notes
-    -----
-    Not entirely sure this does what it says that it does
+    Args:
+        num_nodes (int): The number of nodes.
+        power_law (double): The type of power law distribution,
+            usually between 2 and 3.
+        num_classes (int): The number of classes.
+        p_intra (float): The probability of having connections
+            within a class.
+        p_inter (float): The probability of having connections 
+            between classes.
+
+    Returns:
+        list: An adjacency matrix of the new graph.
+        list: The community assignments.
     """
     # assign labels
     community = np.repeat(list(range(num_nodes)),np.ceil(num_nodes/num_classes))
@@ -40,8 +46,29 @@ def gen_stoney_sbm(num_nodes,power_law,num_classes,p_intra,p_inter):
     return graph,communities
 
 def generate_ssbm(num_nodes,num_classes,p_intra,p_inter,community = None):
-    """
-    Generates a Symmetric SSBM
+    """Generates a SSBM.
+
+    This function generates a Symmetric Stochastic Block model. It does
+    this by creating blocks for in and out of class probability. Then
+    it draws from a uniform distribution and uses the p_intra and p_inter
+    probabilities to assign edges between specific nodes
+
+    Args:
+        num_nodes (int): The number of nodes.
+        num_classes (int): The number of classes.
+        p_intra (float): The probability of having
+            in class connections.
+        p_inter (float): The probability of having
+            edges between classes
+        community (list): Optional, may specify how
+            the nodes are divided into communities.
+            Automatically assigns communities if none
+            are provided.
+
+    Returns:
+        Graph (list): An adjacency matrix representing the
+            edges in the generated graph.
+        Communities (list): The node assignment to communities.
     """
     if community is None:
         # assign a community to each node
@@ -78,8 +105,21 @@ def generate_ssbm(num_nodes,num_classes,p_intra,p_inter,community = None):
     return graph,communities
 
 def generate_perms_cube(num_classes,num_feat):
-    """
-    Generates where our point clouds will exist relative to the origin, uses a cube
+    """Generates points on the corners of a hypercube.
+
+    It uses the number of ways that [0,1] can be arranged in num_feat
+    different ways to generate points on a hypercube. It just takes
+    the first num_classes of points to use for calculation.
+
+    Args:
+        num_classes (int): The number of classes or number
+            of points that we want to return.
+        num_feat (int): The number of dimensions that we are
+            allowed to use.
+
+    Returns:
+        vecs (list): A list of vectors that corrospond to
+            points on a hypercube
     """
     assert num_classes <= 2**num_feat
     vecs = []
@@ -104,15 +144,25 @@ def generate_perms_cube(num_classes,num_feat):
     #print(vecs)
     return np.array(vecs[:num_classes])
 
-def generate_perms_orthogonal(num_classes,num_feat):
-    """
-    same thing, but initializes random orthogonal vectors instead
+def generate_orthogonal_vecs(num_vecs,num_dim):
+    """Generates Orthogonal vectors
+
+    Uses a random generation process to generate num_vecs
+    orthogonal vectors in num_dim dimensions.
+
+    Args:
+        num_vecs (int): The number of vectors we want to return.
+        num_dim (int): The number of dimensions that we can use.
+
+    Returns:
+        vecs (list): A list of randomly orthogonal vectors
     """
     vecs = []
-    for i in range(num_classes):
+    assert num_vecs <= num_dim
+    for i in range(num_vecs):
         orthogonal = False
         while not orthogonal:
-            rand_vec = np.random.uniform(-10,10,num_feat)
+            rand_vec = np.random.uniform(-10,10,num_dim)
             rand_vec = rand_vec/np.linalg.norm(rand_vec)
             orthogonal = True
             for j in range(len(vecs)):
@@ -123,13 +173,29 @@ def generate_perms_orthogonal(num_classes,num_feat):
         #print(len(vecs))
     return np.array(vecs)
 
-def generate_csbm(avg_degree,lamb,feature_separation,num_features,num_nodes,num_classes):
+def generate_csbm(avg_degree,degree_separation,feature_separation,num_features,num_nodes,num_classes):
+    """Creates a Contextual Stochastic Block model
+
+    It takes the avg degree, degree separation, and feature separation
+    to generate a SBM with features corrosponding to classes.
+
+    Args:
+        avg_degree (int): The average degree of all the nodes.
+        degree_separation (float): The separation constrain for
+            edges in classes and edges between classes.
+        features_separation (float): A measure of how far apart
+            the means are.
+        num_features (int): The number of features to generate.
+        num_nodes (int): The number nodes to generate.
+        num_classes (int): The number of classes to generate
+
+    Returns:
+        Adjacency matrices for a training and testing set.
+        Features for training and testing sets.
+        Labels for training and testing sets.
     """
-    Generates a Contextual Stochastic Block Model
-    following the method outlined in the paper.
-    """
-    c_in = avg_degree+lamb*np.sqrt(avg_degree) # c_in/c_out as described in the equations
-    c_out = avg_degree-lamb*np.sqrt(avg_degree)
+    c_in = avg_degree+degree_separation*np.sqrt(avg_degree) # c_in/c_out as described in the equations
+    c_out = avg_degree-degree_separation*np.sqrt(avg_degree)
     p_in = c_in/num_nodes # compiles these to pass into the SSBM
     p_out = c_out/num_nodes
 
@@ -142,7 +208,7 @@ def generate_csbm(avg_degree,lamb,feature_separation,num_features,num_nodes,num_
     # obtains the random noise vector i presume
     train_v = train_communities # puts the groups into a format for the equations
 
-    perms = generate_perms_orthogonal(num_classes,num_features)
+    perms = generate_orthogonal_vecs(num_classes,num_features)
     #print(communities)
     #print(perms)
     dist = np.sqrt(feature_separation/num_nodes)
@@ -162,17 +228,31 @@ def generate_csbm(avg_degree,lamb,feature_separation,num_features,num_nodes,num_
 
     return train_adj,train_b,train_communities, test_adj,test_b,test_communities
 
-def generate_csbm_modified(avg_degree,lamb,origin_distance,num_features,num_nodes,num_classes):
-    """
-    Creates a Modified Contextual Stochastic Block Model
+def generate_csbm_modified(avg_degree,degree_separation,
+        origin_distance,num_features,num_nodes,num_classes):
+    """Creates a Modified Contextual Stochastic Block Model
 
-    Notes
-    -----
-    This model differs from the others in that it calculates
-    degree separation in terms of distance from the origin
+    This is very similar to the original implementation of the CSBM
+    but it changes the metric to measure distance between means to be
+    distance from the origin
+
+    Args:
+        avg_degree (int): The average degree of all the nodes.
+        degree_separation (float): The separation constrain for
+            edges in classes and edges between classes.
+        origin_distance (float): How far from the origin the means
+            are.
+        num_features (int): The number of features to generate.
+        num_nodes (int): The number nodes to generate.
+        num_classes (int): The number of classes to generate
+
+    Returns:
+        Adjacency matrices for a training and testing set.
+        Features for training and testing sets.
+        Labels for training and testing sets.
     """
-    c_in = avg_degree+lamb*np.sqrt(avg_degree) # c_in/c_out as described in the equations
-    c_out = avg_degree-lamb*np.sqrt(avg_degree)
+    c_in = avg_degree+degree_separation*np.sqrt(avg_degree) # c_in/c_out as described in the equations
+    c_out = avg_degree-degree_separation*np.sqrt(avg_degree)
     p_in = c_in/num_nodes # compiles these to pass into the SSBM
     p_out = c_out/num_nodes
 
@@ -185,7 +265,7 @@ def generate_csbm_modified(avg_degree,lamb,origin_distance,num_features,num_node
     # obtains the random noise vector i presume
     train_v = train_communities # puts the groups into a format for the equations
 
-    perms = generate_perms_orthogonal(num_classes,num_features)
+    perms = generate_orthogonal_vecs(num_classes,num_features)
     #print(communities)
     #print(perms)
     dist = origin_distance
@@ -206,13 +286,22 @@ def generate_csbm_modified(avg_degree,lamb,origin_distance,num_features,num_node
     return train_adj,train_b,train_communities, test_adj,test_b,test_communities
 
 def dc_sbm_adj_edges(num_nodes,num_groups,communities,degree_distribution,group_edge_avg):
-    """
-    Generates a Degree Corrected SBM.
+    """Generates the edges in a DC_SBM
 
-    Notes
-    -----
-    Manually iterates through each group to
-    calculate the adjacency matrix.
+    Manually iterates through all of the communities and generates
+    edges according to the degree distribution and group edge avg.
+
+    Args:
+        num_nodes (int): The number of nodes in the graph.
+        num_groups (int): The number of clusters.
+        communities (list): The community assignments.
+        degree_distribution (list): List of the expected degree
+            of any given node.
+        group_edge_avg (list): The expected number of edges
+            between groups.
+
+    Returns:
+        adj (list): An adjacency matrix of the DC_SBM.
     """
     N = num_nodes
     w = group_edge_avg
@@ -263,15 +352,32 @@ def dc_sbm_adj_edges(num_nodes,num_groups,communities,degree_distribution,group_
                 actual_degrees[pairs[:,1]] += 1
     return adj
 
-def dc_ssbm(num_nodes,num_groups,lamb):
-    """
-    Generates a Degree Corrected Stochastic Block Model with Features
+def dc_ssbm(num_nodes,num_groups,separation):
+    """Generates a Degree Corrected Stochastic Block Model with Features
 
     We first assign communities to each node, then we assign them
     degrees(generated randomly) from a powerlaw distribution. Following
     this we obtain w(a parameter used to calculate edges in the SBM)
     using the degrees. Then we obtain the adjacency matrix and the
-    features usign other methods
+    features using other methods.
+
+    This function copmutes the degree distribution and group
+    assignments prior to letting dc_sbm_adj_edges() calculate
+    the actual edges.
+
+    Args:
+        num_nodes (int): The number of nodes for the graph.
+        num_groups (int): The number of groups for the graph.
+        separation (float between [0,1]): The interpolation constant
+            between completely random and completely planted
+            graphs. A value of 0 corrosponds to a completely
+            random graph, a value of 1 corrosponds to a
+            completely planted graph.
+
+    Returns:
+        adj (list): An adjacency matrix for our new graph.
+        communities (list): The community assignments for
+            the graph.
     """
     # assign communities to all of our nodes
     community = np.repeat(list(range(num_groups)),np.ceil(num_nodes/num_groups))
@@ -304,7 +410,7 @@ def dc_ssbm(num_nodes,num_groups,lamb):
     w_planted = np.diag(group_deg)*density_enhancer
     w_random = np.outer(group_deg,group_deg)/(2*num_edges)*density_enhancer
     # not sure if this is normalized as we want it
-    w = lamb*w_planted + (1-lamb)*w_random
+    w = separation*w_planted + (1-separation)*w_random
 
     # obtain our adjacency matrix along with the corrosponding features
     adj = dc_sbm_adj_edges(num_nodes,num_groups,communities,theta, w)
@@ -315,46 +421,88 @@ def dc_ssbm(num_nodes,num_groups,lamb):
     # to specify this you could.
     return adj,communities
 
-def generate_dc_ssbm(num_nodes,num_groups,num_features,lamb,origin_distance):
-    """
-    obtains both training and testing DC_SBMs
+def generate_dc_ssbm(num_nodes,num_groups,num_features,separation,origin_distance):
+    """Generates the Training and Testing DC_SBMs
+
+    This function utilizes the DC_SBM to actually generate
+    adjacency matrices. It also computes the feature vectors
+    for any given node in the graph, but keeps the means the
+    same.
+
+    Args:
+        num_nodes (int): The number of nodes in the graph.
+        num_groups (int): The number of groups to generate.
+        num_features (int): The number of features to generate.
+        separation (float): The interpolation constant between
+            planted and random graphs.
+        origin_distance (float): The distance of the means from
+            the origin.
+
+    Returns:
+        Adjacency matrices for a training and testing set.
+        Features for training and testing sets.
+        Labels for training and testing sets.
     """
     rand_vec = np.random.normal(0,1/num_features,(num_features))
-    # obtains the random normal vector u how far our clouds are from the origin
+    # obtains the random normal vector rand_vec, how far our clouds are from the origin
+    perms = generate_orthogonal_vecs(num_groups,num_features)
+    # how we want to permute the random vector rand_vec
 
-    train_adj, train_communities = dc_ssbm(num_nodes,num_groups,lamb)
-    # obtains the graph structure
-    train_z = np.random.normal(0,.2,(num_nodes,num_features))
-    # obtains the random noise vector i presume
-    train_v = train_communities # puts the groups into a format for the equations
+    def get_feature_vecs(perm_idx,noise):
+        """Generates features vectors
 
-    perms = generate_perms_orthogonal(num_groups,num_features)
-    #print(communities)
-    #print(perms)
-    dist = origin_distance
-    train_b = np.zeros((num_nodes,num_features))
-    for i in range(num_nodes):
-        train_b[i] = dist*(np.diag(perms[train_v[i]])@rand_vec) + train_z[i]/np.sqrt(num_features)
+        Generates feature vectors along a given mean
+        and distance from the origin. But can vary how
+        the noise is applied to these vectors and what
+        which means they are applied too(because of class)
 
-    # recompute all this but for a test set
-    test_adj, test_communities = dc_ssbm(num_nodes,num_groups,lamb)# change graph structure
-    test_z = np.random.normal(0,.2,(num_nodes,num_features))
-    # change the noise vector, but don't change the community centers
-    test_b = np.zeros((num_nodes,num_features))
-    test_v = test_communities
-    for i in range(num_nodes):
-        test_b[i] = dist*(np.diag(perms[test_v[i]])@rand_vec) + test_z[i]/np.sqrt(num_features)
+        Args:
+            perm_idx (list): The permutation index or the class
+                assignments. Basically tells us which mean to use.
+            noise (list): The noise we will apply to each of the
+                means.
 
-    return train_adj,train_b,train_communities, test_adj,test_b,test_communities
+        Returns:
+            b (list): A list of feature vectors for all the nodes
+                in the graph.
+        """
+        features = np.zeros((num_nodes,num_features))
+        for i in range(num_nodes):
+            features[i] = origin_distance*(np.diag(perms[perm_idx[i]])@rand_vec)+ noise[i]/np.sqrt(num_features)
+        return features
+
+
+    train_adj, train_communities = dc_ssbm(num_nodes,num_groups,separation)
+    train_noise = np.random.normal(0,.2,(num_nodes,num_features))
+    train_features = get_feature_vecs(train_communities,train_noise)
+
+    test_adj, test_communities = dc_ssbm(num_nodes,num_groups,separation)
+    test_noise = np.random.normal(0,.2,(num_nodes,num_features))
+    test_features = get_feature_vecs(test_communities,test_noise)
+
+    return train_adj,train_features,train_communities, test_adj,test_features,test_communities
 
 def xor_data(num_nodes, feat_dim,log_scaling):
-    """
-    Generates XOR features
+    """Generates XOR data
+
+    Generates binary data in clouds that are orthogonal
+    to each other. Additionally each class has two clouds
+    one that is positive and one that is negative.
+
+    Args:
+        num_nodes (int): The number of nodes
+        feat_dim (int): The number of features..
+        log_scaling (float): How far we want our clouds
+            from the origin. Measured in log10.
+
+    Returns:
+        training and test feature vectors
+        community assignments
     """
     bern = bernoulli(.5)
     communities = bern.rvs(num_nodes)
     orientation = bern.rvs(num_nodes)
-    vecs = generate_perms_orthogonal(2,feat_dim)
+    vecs = generate_orthogonal_vecs(2,feat_dim)
     u = vecs[0]*(10**log_scaling)
     v = vecs[1]*(10**log_scaling)
     std = 1/feat_dim
@@ -369,8 +517,22 @@ def xor_data(num_nodes, feat_dim,log_scaling):
     return X,test_x,communities
 
 def xor_sbm(num_nodes, feat_dim, intra, inter, log_scaling):
-    """
-    Generates an XOR_SBM as outlined in "Effects of Graph Convolutions in Deep Networks"
+    """Generates an XOR_SBM as outlined in "Effects of Graph Convolutions in Deep Networks".
+
+    Args:
+        num_nodes (int): The number of nodes.
+        feat_dim (int): The number of features.
+        intra (float): The probability of having edges
+            within a class.
+        inter (float): The probability of having edges
+            between different classes.
+        log_scaling (float): How far we want our feature
+            clouds from the origin.
+
+    Returns:
+        training and testing features.
+        training and testing adjacency matrices.
+        community assignments.
     """
     features, test_features, communities = xor_data(num_nodes,feat_dim,log_scaling)
     adj, _ = generate_ssbm(num_nodes,2,intra,inter,communities)

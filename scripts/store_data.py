@@ -49,7 +49,7 @@ while mu < 6/MAX_COMPS*(comp_id+1)-.01:# repeat this untill our mu reaches 0
             avg = computing_accs[-5:,0].mean()
         lamb_i += 1
         train_adj, train_b, train_labels, test_adj, test_b, test_labels= generate_csbm_modified(
-            avg_degree=d,lamb=lamb,num_classes=num_classes,num_features=num_features,
+            avg_degree=d,degree_separation=lamb,num_classes=num_classes,num_features=num_features,
             origin_distance=mu,num_nodes=num_nodes)
             # generate_DC_SBM(num_nodes,num_classes,num_features,lamb,mu)
 
