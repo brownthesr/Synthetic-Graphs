@@ -13,7 +13,7 @@ class GCN(torch.nn.Module):
     """
     Pytorch_Geometric implementation of GCN
     """
-    def __init__(self, in_feat, hid_feat, out_feat):
+    def __init__(self, in_feat, hid_feat, out_feat, log_soft = True):
         """
         Constructor of class
         """
@@ -22,6 +22,7 @@ class GCN(torch.nn.Module):
         #self.convh = GCNConv(hid_feat,hid_feat)
         self.conv2 = GCNConv(hid_feat, out_feat)
         self.activation = nn.ReLU()
+        self.log_soft = log_soft
         #self.dropout = nn.Dropout(p=.4)
 
     def forward(self, x,edge_index):
@@ -33,7 +34,37 @@ class GCN(torch.nn.Module):
         #x = self.activation(self.convh(x,edge_index))
         #x = F.dropout(x,training=self.training)
         x = self.conv2(x, edge_index)
-        return F.log_softmax(x,dim=1)
+        if self.log_soft is True:
+            return F.log_softmax(x,dim=1)
+        else:
+            return x
+
+class TopGCN(torch.nn.Module):
+    """
+    Pytorch_Geometric implementation of a Custom Topological GCN
+
+    """
+    def __init__(self, in_feat, hid_feat, out_feat):
+        """
+        Constructor of class
+        """
+        super().__init__()
+        self.conv1 = nn.Linear(in_feat,hid_feat)#GCNConv(in_feat, hid_feat,add_self_loops=False)
+        #self.convh = GCNConv(hid_feat,hid_feat)
+        self.conv2 = GCNConv(hid_feat, out_feat,add_self_loops=False,normalize=False)
+        self.activation = nn.ReLU()
+        #self.dropout = nn.Dropout(p=.4)
+
+    def forward(self, x,edge_index):
+        """
+        Runs forward propagation
+        """
+        x = self.activation(self.conv1(x))
+        x = F.dropout(x, training= self.training)
+        #x = self.activation(self.convh(x,edge_index))
+        #x = F.dropout(x,training=self.training)
+        x = self.conv2(x, edge_index)
+        return x
 
 class NN(torch.nn.Module):
     """
@@ -53,7 +84,7 @@ class NN(torch.nn.Module):
         Runs forward propagation
         """
         x = self.activation(self.lin1(x))
-        x = F.dropout(x, training= self.training)
+        #x = F.dropout(x, training= self.training)
         x = self.lin2(x)
         return F.log_softmax(x,dim=1)
 

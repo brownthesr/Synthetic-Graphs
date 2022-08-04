@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.figure()
 
-COMPARE = False# this is for the comparison of the two methods
-NN = True
+COMPARE = True# this is for the comparison of the two methods
+NN = False
+EIG = True
 test_accs = np.genfromtxt("data/mu_lambda_variation_GCN.txt")
-test_accs_vanilla = np.genfromtxt("data/DC_SBM_NN.txt")
+test_accs_vanilla = np.genfromtxt("data/mu_lambda_variation_eig.txt")
 print(len(test_accs))
-
+#note put the NN and the eigenvector in test_accs_vanilla
 x = test_accs[:,1]# lambda
 z = test_accs[:,0] #accs
 z = z.reshape(200,61)
@@ -18,13 +19,19 @@ z = z.reshape(200,61)
 y = test_accs[:,2]# mu
 
 #y = y.reshape(200,61)
-
+print(test_accs_vanilla.shape)
 
 if COMPARE:
-    new_Z = np.zeros((200,100))
+    new_Z = np.zeros((200,61))
     if NN:
         for i in range(200):
             new_Z[i] = z[i] - test_accs_vanilla[i][0]
+    elif EIG:
+        new_Z = np.zeros((61,200))
+        for i in range(61):
+            new_Z[i] = z[:,i] - test_accs_vanilla[i][0]
+            #print(test_accs_vanilla[i][0])
+        new_Z = new_Z.T
     else:
         test_accs_vanilla = test_accs_vanilla.reshape(200,100,3)
         for i in range(200):

@@ -50,11 +50,11 @@ def draw_graph(adj,communities,feat):
     communities = communities[mask]
     graph.remove_nodes_from(isos)
     graph.remove_edges_from(nx.selfloop_edges(graph))
-    colors = ["yellow"]*400
+    colors = ["yellow"]*len(adj)
     colors = np.array(colors)
     colors[np.where(communities == 0)] = "green"
     colors[np.where(communities == 1)] = "blue"
     colors[np.where(communities == 2)] = "red"
     colors[np.where(communities == 3)] = "yellow"
-    plt.scatter(feat[:,0],feat[:,1],color=colors)
+    nx.draw(graph,node_color=colors)
     plt.show()
