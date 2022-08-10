@@ -538,3 +538,128 @@ def xor_sbm(num_nodes, feat_dim, intra, inter, log_scaling):
     adj, _ = generate_ssbm(num_nodes,2,intra,inter,communities)
     test_adj, _ = generate_ssbm(num_nodes,2,intra,inter,communities)
     return features, adj, test_features, test_adj, communities
+
+def generate_cdcbm(avg_degree,degree_separation,
+        origin_distance,num_features,num_nodes,num_classes,gamma):
+    """Creates a degree corrected contextual stochastic block model
+
+    Args:
+        avg_degree (int): The average degree of all the nodes.
+        degree_separation (float): The separation constrain for
+            edges in classes and edges between classes.
+        origin_distance (float): How far from the origin the means
+            are.
+        num_features (int): The number of features to generate.
+        num_nodes (int): The number nodes to generate.
+        num_classes (int): The number of classes to generate
+        gamma (float): The degree of the power law distribution
+
+    Returns:
+        Adjacency matrices for a training and testing set.
+        Features for training and testing sets.
+        Labels for training and testing sets.
+    """
+    c_in = avg_degree+degree_separation*np.sqrt(avg_degree) # c_in/c_out as described in the equations
+    c_out = avg_degree-degree_separation*np.sqrt(avg_degree)
+    p_in = c_in/num_nodes # compiles these to pass into the SSBM
+    p_out = c_out/num_nodes
+
+    random_vec = np.random.normal(0,1/num_features,(num_features))
+    # obtains the random normal vector u how far our clouds are from the origin
+
+    train_adj, train_communities = generate_dcbm(num_nodes,num_classes,p_in,p_out,avg_degree,gamma)
+     # obtains the graph structure
+    train_z = np.random.normal(0,.2,(num_nodes,num_features))
+    # obtains the random noise vector i presume
+    train_v = train_communities # puts the groups into a format for the equations
+
+    perms = generate_orthogonal_vecs(num_classes,num_features)
+    #print(communities)
+    #print(perms)
+    dist = origin_distance
+    train_b = np.zeros((num_nodes,num_features))
+    for i in range(num_nodes):
+        train_b[i] = dist*(np.diag(perms[train_v[i]])@random_vec) + train_z[i]/np.sqrt(num_features)
+
+    # recompute all this but for a test set
+    test_adj, test_communities = generate_dcbm(num_nodes,num_classes,p_in,p_out,avg_degree,gamma)
+    # change graph structure
+    test_z = np.random.normal(0,.2,(num_nodes,num_features))
+    # change the noise vector, but don't change the community centers
+    test_b = np.zeros((num_nodes,num_features))
+    test_v = test_communities
+    for i in range(num_nodes):
+        test_b[i] = dist*(np.diag(perms[test_v[i]])@random_vec) + test_z[i]/np.sqrt(num_features)
+
+    return train_adj,train_b,train_communities, test_adj,test_b,test_communities
+
+def generate_dcbm(num_nodes,num_classes,p_intra,p_inter,avg_degree,gamma,community = None):
+    """_summary_
+
+    Args:
+        num_nodes (int): number of nodes
+        num_classes (int): number of classes
+        p_intra (float): probability of intra-class connection
+        p_inter (float): probability of inter class dimensions
+        avg_degree (int): average degree of network
+        gamma (float): power law degree
+        community (list, optional): A list of the community structure. Defaults to None.
+
+    Returns:
+        list: the adjacency matrix with the corrosponding communities
+    """
+    if community is None:
+        # assign a community to each node
+        community = np.repeat(list(range(num_classes)),np.ceil(num_nodes/num_classes))
+
+        #np.repeat(list to iterate over, how many times to repeat an item)
+
+        #make sure community has size n
+        community = community[0:num_nodes]
+        # just in case repeat repeated too many
+
+    communities = community.copy()
+
+    # make it a collumn vector
+    community = np.expand_dims(community,1)
+
+    # generate a boolean matrix indicating whether
+    # two nodes share a community
+    # this is a smart way to generate a section graph
+    intra = community == community.T
+    inter = community != community.T# we can also use np.logical not
+
+    random = np.random.random((num_nodes,num_nodes))
+    tri = np.tri(num_nodes,k=-1).astype(bool)
+
+    degrees,degree_distr = generate_power_distr(num_nodes,gamma)
+    fatness = avg_degree/(degree_distr@(np.arange(num_nodes)+1))
+    p_inter = p_inter/avg_degree*degrees*fatness
+    p_intra = p_intra/avg_degree*degrees*fatness
+
+    intergraph = (random < p_intra) * intra * tri
+    # this creates a matrix that only has trues where
+    # random< p_intra, they are in intra, and along half the matrix
+    # (if it were the whole matrix it would be double the edges we want)
+    intragraph = (random < p_inter) * inter * tri# same thing here
+    graph = np.logical_or(intergraph,intragraph)
+    graph = graph*1# this converts it to a int tensor
+    graph += graph.T
+    return graph,communities
+
+def generate_power_distr(num_nodes, gamma):
+    """Pulls node degrees from a powerlaw distribution
+
+    Args:
+        num_nodes (int): Number of nodes
+        gamma (float): the degree of our powerlaw distribution
+
+    Returns:
+        list(int): a list of the drawn degrees
+        list(float): a list of the probability distribution
+    """
+    degrees = np.arange(num_nodes)+1
+    probs = 1/(degrees**gamma)
+    probs = probs/probs.sum()
+    degrees = np.random.choice(degrees,num_nodes,p=probs)
+    return degrees,probs

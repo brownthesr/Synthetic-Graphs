@@ -50,6 +50,7 @@ def draw_graph(adj,communities,feat):
     communities = communities[mask]
     graph.remove_nodes_from(isos)
     graph.remove_edges_from(nx.selfloop_edges(graph))
+    adj = nx.to_numpy_array(graph)
     colors = ["yellow"]*len(adj)
     colors = np.array(colors)
     colors[np.where(communities == 0)] = "green"

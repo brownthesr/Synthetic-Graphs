@@ -9,7 +9,7 @@ COMPARE = True# this is for the comparison of the two methods
 NN = False
 EIG = True
 test_accs = np.genfromtxt("data/mu_lambda_variation_GCN.txt")
-test_accs_vanilla = np.genfromtxt("data/mu_lambda_variation_eig.txt")
+test_accs_vanilla = np.genfromtxt("data/DC_mu_lambda_variation_eig.txt")
 print(len(test_accs))
 #note put the NN and the eigenvector in test_accs_vanilla
 x = test_accs[:,1]# lambda

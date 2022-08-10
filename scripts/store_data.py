@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from src.generate_data import *
 from src.models import *
 from src.utils import *
-
+from sklearn.cluster import SpectralClustering
 
 
 # these are the hyperparameters to generate the graph/features,
@@ -27,6 +27,7 @@ mu = 0 + 6.0/MAX_COMPS * comp_id# difference between the means
 # of the two classes, increasing this means increasing difference between class features
 num_nodes = 1000
 num_features = 10
+gamma = 2.5
 num_classes=2
 
 
@@ -43,19 +44,18 @@ while mu < 6/MAX_COMPS*(comp_id+1)-.01:# repeat this untill our mu reaches 0
     avg = 0
     lamb_i = 0# this just tells us if we can start tracking averages
     lamb = 0# we need to reset lambda every loop
-    while lamb <= 1:# repeat this loop until our value of lambda can solve exact recovery
+    while lamb <= 3:# repeat this loop until our value of lambda can solve exact recovery
         if lamb_i  > 5:
             computing_accs = np.array(all_accs)
             avg = computing_accs[-5:,0].mean()
         lamb_i += 1
-        train_adj, train_b, train_labels, test_adj, test_b, test_labels= generate_csbm_modified(
+        train_adj, train_b, train_labels, test_adj, test_b, test_labels= generate_cdcbm(
             avg_degree=d,degree_separation=lamb,num_classes=num_classes,num_features=num_features,
-            origin_distance=mu,num_nodes=num_nodes)
+            origin_distance=mu,num_nodes=num_nodes,gamma=gamma)
             # generate_DC_SBM(num_nodes,num_classes,num_features,lamb,mu)
 
         # sets up model/optimizer
-        model = NN(num_features,hidden_layers,num_classes)
-        model
+        model = GCN(num_features,hidden_layers,num_classes)
         optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
 
         # creates some masks so we have stuff for training and validation
@@ -80,15 +80,15 @@ while mu < 6/MAX_COMPS*(comp_id+1)-.01:# repeat this untill our mu reaches 0
         for epoch in range(epochs):# runs through all the data 200 times
 
             optimizer.zero_grad()
-            out = model(train_b)
+            out = model(train_b,train_edge_list)
             train_loss = F.nll_loss(out[train_mask], train_labels[train_mask])
             train_loss.backward()
             optimizer.step()
         model.eval()
-        out = model(test_b)
+        out = model(test_b,test_edge_list)
         test_acc = accuracy(out.max(1)[1],test_mask,test_labels)
         all_accs.append([test_acc,lamb,mu])
         print("test_acc: ", test_acc,"lambda:",lamb,"mu:",mu)
-        np.savetxt(f"data/DC_SBM_NN_test({comp_id}).txt",all_accs)
-        lamb +=10
+        np.savetxt(f"DC_mu_lambda_variation_GCN.txt",all_accs)
+        lamb +=.05
     mu +=.03
