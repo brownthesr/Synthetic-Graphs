@@ -17,6 +17,7 @@ from sklearn.cluster import SpectralClustering
 comp_id = int(sys.argv[1])
 MAX_COMPS = 200.0
 MAX_MU = 6.0
+MAX_LAMB = 3.0
 mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
 # of the two classes, increasing this means increasing difference between class features
 
@@ -50,11 +51,11 @@ def mu_loop(mu, lamb, model_type):
             mu += 100
 
 def lamb_loop(mu, lamb, model_type):
-    while lamb <= 3:
+    while lamb <= MAX_LAMB:
         test_acc = runs_loop(mu, lamb, model_type)
         write_data(mu, lamb, test_acc, model_type)
         print("test_acc: ", test_acc,"lambda:",lamb,"mu:",mu)
-        lamb += .05
+        lamb += MAX_LAMB/60
         if models[model_type].string() == "NN":
             lamb += 100
 
