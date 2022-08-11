@@ -59,3 +59,20 @@ def draw_graph(adj,communities,feat):
     colors[np.where(communities == 3)] = "yellow"
     nx.draw(graph,node_color=colors)
     plt.show()
+
+def generate_power_distr(num_nodes, gamma):
+    """Pulls node degrees from a powerlaw distribution
+
+    Args:
+        num_nodes (int): Number of nodes
+        gamma (float): the degree of our powerlaw distribution
+
+    Returns:
+        list(int): a list of the drawn degrees
+        list(float): a list of the probability distribution
+    """
+    degrees = np.arange(num_nodes)+1
+    probs = 1/(degrees**gamma)
+    probs = probs/probs.sum()
+    degrees = np.random.choice(degrees,num_nodes,p=probs)
+    return degrees,probs

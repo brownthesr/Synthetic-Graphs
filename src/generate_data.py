@@ -5,6 +5,7 @@ from itertools import permutations,combinations_with_replacement
 import numpy as np
 from scipy.stats import poisson
 from scipy.stats import bernoulli
+from utils import *
 
 def gen_stoney_sbm(num_nodes,power_law,num_classes,p_intra,p_inter):
     """Generates a DC_SBM the way stoney proposed
@@ -386,7 +387,6 @@ def dc_ssbm(num_nodes,num_groups,separation):
     # get expected degrees for each node according to a powerlaw distribution
     degree_probs = np.arange((num_nodes)-1) + 1# here we make the assumption that the degree of
                                             # a node won't surpass the number of nodes
-                                            # within it's respective group
     degree_probs = 1/(degree_probs*degree_probs)
     degree_probs = degree_probs/degree_probs.sum()
     degrees = np.random.choice(np.arange(num_nodes-1) + 1, size = (num_nodes), p = degree_probs)
@@ -541,7 +541,7 @@ def xor_sbm(num_nodes, feat_dim, intra, inter, log_scaling):
 
 def generate_cdcbm(avg_degree,degree_separation,
         origin_distance,num_features,num_nodes,num_classes,gamma):
-    """Creates a degree corrected contextual stochastic block model
+    """Creates DCBM with Feature information
 
     Args:
         avg_degree (int): The average degree of all the nodes.
@@ -594,7 +594,7 @@ def generate_cdcbm(avg_degree,degree_separation,
     return train_adj,train_b,train_communities, test_adj,test_b,test_communities
 
 def generate_dcbm(num_nodes,num_classes,p_intra,p_inter,avg_degree,gamma,community = None):
-    """_summary_
+    """This Generates a Degree Corrected Stochastic Block Model
 
     Args:
         num_nodes (int): number of nodes
@@ -646,20 +646,3 @@ def generate_dcbm(num_nodes,num_classes,p_intra,p_inter,avg_degree,gamma,communi
     graph = graph*1# this converts it to a int tensor
     graph += graph.T
     return graph,communities
-
-def generate_power_distr(num_nodes, gamma):
-    """Pulls node degrees from a powerlaw distribution
-
-    Args:
-        num_nodes (int): Number of nodes
-        gamma (float): the degree of our powerlaw distribution
-
-    Returns:
-        list(int): a list of the drawn degrees
-        list(float): a list of the probability distribution
-    """
-    degrees = np.arange(num_nodes)+1
-    probs = 1/(degrees**gamma)
-    probs = probs/probs.sum()
-    degrees = np.random.choice(degrees,num_nodes,p=probs)
-    return degrees,probs
