@@ -15,7 +15,7 @@ from sklearn.cluster import SpectralClustering
 
 # these are to support Parallelizability
 comp_id = int(sys.argv[1])
-MAX_COMPS = 1.0
+MAX_COMPS = 200.0
 mu = 0 + 6.0/MAX_COMPS * comp_id# difference between the means
 # of the two classes, increasing this means increasing difference between class features
 
@@ -43,7 +43,7 @@ degree_corrected = False
 def mu_loop(mu, lamb, model_type):
     while mu < 6/MAX_COMPS*(comp_id+1)-.01:
         lamb = 0
-        lamb_loop(mu, lamb)
+        lamb_loop(mu, lamb,model_type)
         mu += .03
         if models[model_type].string() == "eigen":
             mu += 100
@@ -73,9 +73,9 @@ def runs_loop(mu, lamb, model_type):
 def write_data(mu, lamb, test_acc, model_type):
     all_accs.append([test_acc,lamb,mu])
     if degree_corrected:
-        np.savetxt(f"DC_mu_lambda_variation_{models[model_type].string()}.txt",all_accs)
+        np.savetxt(f"DC_{models[model_type].string()}({comp_id}).txt",all_accs)
     else:
-        np.savetxt(f"mu_lambda_variation_{models[model_type].string()}.txt",all_accs)
+        np.savetxt(f"{models[model_type].string()}({comp_id}).txt",all_accs)
 
 def get_model_data(model_type):
     model = models[model_type](num_features,hidden_layers,num_classes)
