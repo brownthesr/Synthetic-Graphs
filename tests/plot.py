@@ -8,15 +8,15 @@ plt.figure()
 COMPARE = True# this is for the comparison of the two methods
 NN = False
 EIG = False
-test_accs = np.genfromtxt("data/DC_mu_lambda_variation_GCN_modified.txt")
-test_accs_vanilla = np.genfromtxt("data/DC_mu_lambda_variation_GCN.txt")
+test_accs = np.genfromtxt("data/mu_lambda_variation_GAT.txt")
+test_accs_vanilla = np.genfromtxt("data/mu_lambda_variation_GCN.txt")
 #print(len(test_accs))
 print(test_accs.shape)
 #note put the NN and the eigenvector in test_accs_vanilla
 x = test_accs[:,1]# lambda
 z = test_accs[:,0] #accs
 z = z.reshape(200,61)
-#x = x.reshape(200,61)
+x = x.reshape(200,61)
 y = test_accs[:,2]# mu
 
 #y = y.reshape(200,61)
@@ -52,5 +52,5 @@ plt.colorbar()
 if COMPARE:
     plt.clim(-.4,.4)
 
-plt.ylim(0,6)
+#plt.ylim(0,6)
 plt.show()

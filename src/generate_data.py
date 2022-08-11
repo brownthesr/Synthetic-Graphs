@@ -5,7 +5,7 @@ from itertools import permutations,combinations_with_replacement
 import numpy as np
 from scipy.stats import poisson
 from scipy.stats import bernoulli
-from utils import *
+from src.utils import *
 
 def gen_stoney_sbm(num_nodes,power_law,num_classes,p_intra,p_inter):
     """Generates a DC_SBM the way stoney proposed

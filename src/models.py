@@ -38,6 +38,8 @@ class GCN(torch.nn.Module):
             return F.log_softmax(x,dim=1)
         else:
             return x
+    def string():
+        return "GCN"
 
 class SAGE(torch.nn.Module):
     """
@@ -68,6 +70,8 @@ class SAGE(torch.nn.Module):
             return F.log_softmax(x,dim=1)
         else:
             return x
+    def string():
+        return "SAGE"
 
 class GAT(torch.nn.Module):
     """
@@ -98,6 +102,8 @@ class GAT(torch.nn.Module):
             return F.log_softmax(x,dim=1)
         else:
             return x
+    def string():
+        return "GAT"
 
 class TopGCN(torch.nn.Module):
     """
@@ -139,14 +145,18 @@ class NN(torch.nn.Module):
         self.lin2 = nn.Linear(hid_feat, out_feat)
         self.activation = nn.ReLU()
 
-    def forward(self, x):
+    def forward(self, x,adj):
         """
         Runs forward propagation
+
+        Adj is included just so that we can lop over this
         """
         x = self.activation(self.lin1(x))
         #x = F.dropout(x, training= self.training)
         x = self.lin2(x)
         return F.log_softmax(x,dim=1)
+    def string():
+        return "NN"
 
 class GCNModified(nn.Module):
     """
