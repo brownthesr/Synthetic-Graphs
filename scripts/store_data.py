@@ -16,7 +16,8 @@ from sklearn.cluster import SpectralClustering
 # these are to support Parallelizability
 comp_id = int(sys.argv[1])
 MAX_COMPS = 200.0
-mu = 0 + 6.0/MAX_COMPS * comp_id# difference between the means
+MAX_MU = 6.0
+mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
 # of the two classes, increasing this means increasing difference between class features
 
 d=10 # this is the average degree
@@ -41,10 +42,10 @@ models = [GCN,SAGE,GAT]
 degree_corrected = False
 
 def mu_loop(mu, lamb, model_type):
-    while mu < 6/MAX_COMPS*(comp_id+1)-.01:
+    while mu < MAX_MU/MAX_COMPS*(comp_id+1)-.01:
         lamb = 0
         lamb_loop(mu, lamb,model_type)
-        mu += .03
+        mu += MAX_MU/200
         if models[model_type].string() == "eigen":
             mu += 100
 
