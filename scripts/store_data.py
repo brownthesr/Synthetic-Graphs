@@ -20,7 +20,7 @@ MAX_MU = 6.0
 MAX_LAMB = 3.0
 mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
 # of the two classes, increasing this means increasing difference between class features
-
+print(mu)
 d=10 # this is the average degree
 lamb = 0 # difference in edge_densities, 0 indicates only node
 # features are informative lamb>0 means more intra edges vs inter edges(homophily)
