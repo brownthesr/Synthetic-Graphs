@@ -105,6 +105,10 @@ class GAT(torch.nn.Module):
     def string():
         return "GAT"
 
+class Spectral:
+    def string():
+        return "Spectral"
+
 class TopGCN(torch.nn.Module):
     """
     Pytorch_Geometric implementation of a Custom Topological GCN
