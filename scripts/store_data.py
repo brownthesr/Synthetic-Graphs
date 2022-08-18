@@ -16,13 +16,13 @@ from sklearn.cluster import SpectralClustering
 # these are to support Parallelizability
 comp_id = int(sys.argv[1])
 MAX_COMPS = 1.0
-MAX_MU = 2.0
+MAX_MU = 6.0
 MAX_LAMB = 3.0
 mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
 # of the two classes, increasing this means increasing difference between class features
 
 d=10 # this is the average degree
-lamb = 0 # difference in edge_densities, 0 indicates only node
+lamb = -3 # difference in edge_densities, 0 indicates only node
 # features are informative lamb>0 means more intra edges vs inter edges(homophily)
 # lamb < 0 means less intra edges vs inter edges(heterophily)
 num_nodes = 1000
@@ -38,10 +38,11 @@ lr = .01
 epochs = 400
 
 
-runs = 20
+runs = 10
 all_accs = []
-models = [Spectral]
-degree_corrected = True
+models = [GCN,SAGE,GAT]
+degree_corrected = False
+# even further
 
 def mu_loop(mu, lamb, model_type):
     """This is the main loop where we loop over mu values
@@ -52,7 +53,7 @@ def mu_loop(mu, lamb, model_type):
         model_type (int): The model type
     """
     while mu < MAX_MU/MAX_COMPS*(comp_id+1)-.00001:
-        lamb = 0
+        lamb = -3
         lamb_loop(mu, lamb,model_type)
         mu += MAX_MU/200
         if models[model_type].string() == "Spectral":
@@ -217,6 +218,14 @@ def get_acc(model, test_b, test_edge_list, test_mask, test_labels):
     acc = accuracy(out.max(1)[1],test_mask,test_labels)
     return acc
 
+for i in range(len(models)):
+    all_accs = []
+    mu_loop(mu, lamb, i)
+
+degree_corrected=True
+all_accs = []
+lamb = -3
+mu = 0 + MAX_MU/MAX_COMPS * comp_id
 for i in range(len(models)):
     all_accs = []
     mu_loop(mu, lamb, i)
