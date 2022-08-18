@@ -28,7 +28,8 @@ lamb = 0 # difference in edge_densities, 0 indicates only node
 num_nodes = 1000
 num_features = 10
 gamma = 2.5
-num_classes=2
+num_classes=int(sys.argv[2])
+# this is so we can better parralelize things
 
 
 # our hyperparameter for our hidden model
@@ -119,9 +120,9 @@ def write_data(mu, lamb, test_acc, model_type):
     """
     all_accs.append([test_acc,lamb,mu])
     if degree_corrected:
-        np.savetxt(f"DC_{models[model_type].string()}({comp_id}).txt",all_accs)
+        np.savetxt(f"store/{num_classes}_DC_{models[model_type].string()}({comp_id}).txt",all_accs)
     else:
-        np.savetxt(f"{models[model_type].string()}({comp_id}).txt",all_accs)
+        np.savetxt(f"store/{num_classes}_{models[model_type].string()}({comp_id}).txt",all_accs)
 
 def get_model_data(model_type):
     """Obtains objects for the model

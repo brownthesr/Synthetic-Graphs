@@ -8,8 +8,8 @@ import numpy as np
 COMPARE = True# this is for the comparison of the two methods
 NN = False
 EIG = False
-f1 = "data/averaged_runs/GAT.txt"
-f2 = "data/averaged_runs/GIANT_GAT.txt"
+f1 = "data/averaged_runs/DC_GCN.txt"
+f2 = "data/averaged_runs/GIANT_DC_GCN.txt"
 test_accs = np.genfromtxt(f1)
 test_accs_vanilla = np.genfromtxt(f2)
 #print(len(test_accs))
