@@ -258,6 +258,10 @@ def generate_csbm_modified(avg_degree,degree_separation,
     p_out = c_out/num_nodes
 
     random_vec = np.random.normal(0,1/num_features,(num_features))
+    while np.linalg.norm(random_vec) ==0:
+        random_vec = np.random.normal(0,1/num_features,(num_features))
+    random_vec = random_vec/np.linalg.norm(random_vec)
+    random_vec *= .3
     # obtains the random normal vector u how far our clouds are from the origin
 
     train_adj, train_communities = generate_ssbm(num_nodes,num_classes,p_in,p_out)
@@ -565,6 +569,10 @@ def generate_cdcbm(avg_degree,degree_separation,
     p_out = c_out/num_nodes
 
     random_vec = np.random.normal(0,1/num_features,(num_features))
+    while np.linalg.norm(random_vec) ==0:
+        random_vec = np.random.normal(0,1/num_features,(num_features))
+    random_vec = random_vec/np.linalg.norm(random_vec)
+    random_vec *= .3
     # obtains the random normal vector u how far our clouds are from the origin
 
     train_adj, train_communities = generate_dcbm(num_nodes,num_classes,p_in,p_out,avg_degree,gamma)
