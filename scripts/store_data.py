@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from src.generate_data import *
 from src.models import *
 from src.utils import *
+from itertools import permutations
 from sklearn.cluster import SpectralClustering
 
 # these are to support Parallelizability
@@ -22,7 +23,7 @@ mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
 # of the two classes, increasing this means increasing difference between class features
 
 d=10 # this is the average degree
-lamb = -3 # difference in edge_densities, 0 indicates only node
+lamb = 0 # difference in edge_densities, 0 indicates only node
 # features are informative lamb>0 means more intra edges vs inter edges(homophily)
 # lamb < 0 means less intra edges vs inter edges(heterophily)
 num_nodes = 1000
@@ -40,7 +41,7 @@ epochs = 400
 
 runs = 10
 all_accs = []
-models = [GCN,SAGE,GAT]
+models = [Spectral]
 degree_corrected = False
 # even further
 
@@ -53,7 +54,7 @@ def mu_loop(mu, lamb, model_type):
         model_type (int): The model type
     """
     while mu < MAX_MU/MAX_COMPS*(comp_id+1)-.00001:
-        lamb = -3
+        lamb = 0
         lamb_loop(mu, lamb,model_type)
         mu += MAX_MU/200
         if models[model_type].string() == "Spectral":
@@ -92,11 +93,14 @@ def runs_loop(mu, lamb, model_type):
             model = SpectralClustering(num_classes,affinity = "precomputed", n_init = 100)
             test_adj, test_mask, test_labels = get_dataset(mu,lamb, adj =True)
             model.fit(test_adj)
-            out1 = model.labels_
-            out2 = 1-model.labels_ 
-            acc1 = accuracy(out1,test_mask,test_labels)
-            acc2 = accuracy(out2,test_mask,test_labels)
-            partial_acc = np.max([acc1,acc2])
+            out = model.labels_
+            possible_labels = np.arange(num_classes)
+            accuracies = []
+            for curr_label in permutations(possible_labels):
+                perm = np.array(curr_label)
+                acc1 = accuracy(out,test_mask,perm[test_labels])
+                accuracies.append(acc1)
+            partial_acc = np.max(accuracies)
             average_acc += partial_acc/runs
         return average_acc
     for run in range(runs):
@@ -121,9 +125,9 @@ def write_data(mu, lamb, test_acc, model_type):
     """
     all_accs.append([test_acc,lamb,mu])
     if degree_corrected:
-        np.savetxt(f"store/{num_classes}_DC_{models[model_type].string()}({comp_id}).txt",all_accs)
+        np.savetxt(f"{num_classes}_DC_{models[model_type].string()}({comp_id}).txt",all_accs)
     else:
-        np.savetxt(f"store/{num_classes}_{models[model_type].string()}({comp_id}).txt",all_accs)
+        np.savetxt(f"{num_classes}_{models[model_type].string()}({comp_id}).txt",all_accs)
 
 def get_model_data(model_type):
     """Obtains objects for the model
@@ -224,7 +228,7 @@ for i in range(len(models)):
 
 degree_corrected=True
 all_accs = []
-lamb = -3
+lamb = 0
 mu = 0 + MAX_MU/MAX_COMPS * comp_id
 for i in range(len(models)):
     all_accs = []

@@ -6,6 +6,7 @@ comvolutions)
 from torch_geometric.nn import GCNConv, GATConv,SAGEConv
 from torch_geometric.nn import DenseGCNConv
 import torch.nn as nn
+from itertools import permutations 
 import torch.nn.functional as F
 import torch
 
