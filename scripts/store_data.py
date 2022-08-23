@@ -29,7 +29,7 @@ mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
 # of the two classes, increasing this means increasing difference between class features
 
 d=10 # this is the average degree
-lamb = 0 # difference in edge_densities, 0 indicates only node
+lamb = -3 # difference in edge_densities, 0 indicates only node
 # features are informative lamb>0 means more intra edges vs inter edges(homophily)
 # lamb < 0 means less intra edges vs inter edges(heterophily)
 num_nodes = 1000
@@ -60,7 +60,7 @@ def mu_loop(mu, lamb, model_type):
         model_type (int): The model type
     """
     while mu < MAX_MU/MAX_COMPS*(comp_id+1)-.00001:
-        lamb = 0
+        lamb = -3
         lamb_loop(mu, lamb,model_type)
         mu += MAX_MU/200
         if models[model_type].string() == "Spectral" or models[model_type].string() == "Leiden":
