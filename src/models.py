@@ -109,6 +109,9 @@ class GAT(torch.nn.Module):
 class Spectral:
     def string():
         return "Spectral"
+class Leiden:
+    def string():
+        return "Leiden"
 
 class TopGCN(torch.nn.Module):
     """

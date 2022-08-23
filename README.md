@@ -10,3 +10,5 @@ I haven't added too much currently, so feel free to add more!
 - The script folder contains all the code to analyze data and produce the plots. It also contains the jupyter notebooks implementation of various SBMs.<br>
 - The src folder contains modules that generate synthetic data, various Neural Network Architectures to operate on said data, and miscellaneous functions. These are found in the generate_data.py, models.py, and utils.py respectively.<br>
 - The tests folder contains models that test each step of the process and are able to plot the results found in data<br>
+## Notes:
+- The Scaled versions of the 7-class GNNs areof size 24000 and not 24200 like the rest of them

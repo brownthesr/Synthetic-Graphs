@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 #plt.figure()
 
-COMPARE = True# this is for the comparison of the two methods
+COMPARE = False# this is for the comparison of the two methods
 NN = False
 EIG = False
-f1 = "data/averaged_runs/DC_GCN.txt"
+f1 = "data/averaged_runs/Masters/2_GCN.txt"
 f2 = "data/averaged_runs/GIANT_DC_GCN.txt"
 test_accs = np.genfromtxt(f1)
 test_accs_vanilla = np.genfromtxt(f2)
@@ -17,8 +17,8 @@ print(test_accs.shape)
 #note put the NN and the eigenvector in test_accs_vanilla
 x = test_accs[:,1]# lambda
 z = test_accs[:,0] #accs
-z = z.reshape(200,61)
-x = x.reshape(200,61)
+z = z.reshape(200,121)
+x = x.reshape(200,121)
 y = test_accs[:,2]# mu
 y = y
 first_z = z

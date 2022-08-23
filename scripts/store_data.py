@@ -11,12 +11,18 @@ import torch.nn.functional as F
 from src.generate_data import *
 from src.models import *
 from src.utils import *
+from torch_geometric.data import Data
+from src.Graph_transformer.models import *
+from torch_geometric.loader import DataLoader
+from src.Graph_transformer.data import *
 from itertools import permutations
 from sklearn.cluster import SpectralClustering
+import igraph as ig
+import leidenalg as la
 
 # these are to support Parallelizability
 comp_id = int(sys.argv[1])
-MAX_COMPS = 1.0
+MAX_COMPS = 200.0
 MAX_MU = 6.0
 MAX_LAMB = 3.0
 mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
@@ -39,9 +45,9 @@ lr = .01
 epochs = 400
 
 
-runs = 10
+runs = 1
 all_accs = []
-models = [Spectral]
+models = [GraphTransformer]
 degree_corrected = False
 # even further
 
@@ -57,7 +63,7 @@ def mu_loop(mu, lamb, model_type):
         lamb = 0
         lamb_loop(mu, lamb,model_type)
         mu += MAX_MU/200
-        if models[model_type].string() == "Spectral":
+        if models[model_type].string() == "Spectral" or models[model_type].string() == "Leiden":
             mu += 100
 
 def lamb_loop(mu, lamb, model_type):
@@ -103,6 +109,65 @@ def runs_loop(mu, lamb, model_type):
             partial_acc = np.max(accuracies)
             average_acc += partial_acc/runs
         return average_acc
+    if models[model_type].string() == "Leiden":
+        for run in range(runs):
+            model = Leiden()
+            test_adj, test_mask, test_labels = get_dataset(mu,lamb, adj =True)
+            g = ig.Graph.Adjacency((test_adj> 0).tolist())
+            partition = la.CPMVertexPartition(g, 
+                                  initial_membership=np.random.choice(num_classes, num_nodes),
+                                  resolution_parameter=0.5)
+            opt = la.Optimiser()
+            opt.consider_empty_community = False
+            opt.optimise_partition(partition)
+            out = partition.membership
+            out = np.array(out)
+            possible_labels = np.arange(num_classes)
+            accuracies = []
+            for curr_label in permutations(possible_labels):
+                perm = np.array(curr_label)
+                acc1 = accuracy(out,test_mask,perm[test_labels])
+                accuracies.append(acc1)
+            partial_acc = np.max(accuracies)
+            average_acc += partial_acc/runs
+        return average_acc
+    if models[model_type].string() == "Graph_transformer":
+        for run in range(runs):
+            model = GraphTransformer(in_size = num_features,
+                                    num_class=num_classes,
+                                    d_model = hidden_layers,
+                                    dim_feedforward=2*hidden_layers,
+                                    num_layers=2,
+                                    gnn_type='gcn',
+                                    use_edge_attr=False,
+                                    num_heads = 10,
+                                    in_embed=False,
+                                    se="gnn",
+                                    use_global_pool=False
+                                    )
+            optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
+            train_edge_list, train_b, train_labels, train_mask, \
+                test_edge_list, test_b, test_labels, test_mask = get_dataset(mu,lamb)
+            train_data = [Data(x=train_b,edge_index=train_edge_list.long(),y=train_labels)]
+            test_data = [Data(x=test_b,edge_index=test_edge_list.long(),y=test_labels)]
+            train_dset = GraphDataset(train_data)
+            test_dset = GraphDataset(test_data)
+            train_loader = DataLoader(train_dset,batch_size = 1,shuffle = False)
+            test_loader = DataLoader(test_dset,batch_size = 1,shuffle = False)
+            model.cuda()
+            #optimizer.cuda()
+            test_mask.cuda()
+            model.train()
+            for train_batch in train_loader:
+                train_batch.cuda()
+                train_transformer(train_batch,optimizer,model,torch.ones(1000).bool())
+            
+            for test_batch in test_loader:
+                test_batch.cuda()
+                partial_acc = transformer_acc(model,test_batch,torch.ones(1000).bool())
+            average_acc += partial_acc/runs
+        return average_acc
+
     for run in range(runs):
         model,optimizer = get_model_data(model_type)
         train_edge_list, train_b, train_labels, train_mask, \
@@ -204,6 +269,34 @@ def train_model(model, optimizer, train_b, train_edge_list,train_mask,train_labe
         train_loss.backward()
         optimizer.step()
 
+def train_transformer(data,optimizer,model,mask):
+    for epoch in range(epochs):# runs through all the data 200 times
+
+        optimizer.zero_grad()
+        out = model(data)
+        #print(out.shape,data.y.shape)
+        train_loss = F.cross_entropy(out, data.y.squeeze())
+        train_loss.backward()
+        optimizer.step()
+
+def transformer_acc(model, data,test_mask):
+    """Tests accuracy for model
+
+    Args:
+        model (Model): The model to test
+        test_b (Tensor): The feature data
+        test_edge_list (Tensor): The edge data
+        test_mask (Tensor): The mask for our data
+        test_labels (Tensor): The labels on our data points
+
+    Returns:
+        double: The total accuracy of the model
+    """
+    model.eval()
+    out = model(data)
+    acc = accuracy(out.max(1)[1],test_mask,data.y.squeeze())
+    return acc
+
 def get_acc(model, test_b, test_edge_list, test_mask, test_labels):
     """Tests accuracy for model
 
@@ -226,10 +319,4 @@ for i in range(len(models)):
     all_accs = []
     mu_loop(mu, lamb, i)
 
-degree_corrected=True
-all_accs = []
-lamb = 0
-mu = 0 + MAX_MU/MAX_COMPS * comp_id
-for i in range(len(models)):
-    all_accs = []
-    mu_loop(mu, lamb, i)
+
