@@ -125,7 +125,7 @@ points = np.vstack([xpoints,ypoints]).T
 if len(points )> 4:
     edges = alpha_shape(points,0.05)
     for a,(i,j) in enumerate(edges):
-        ax_main.plot(points[[i, j], 0], points[[i, j], 1],"w",linewidth=2)
+        ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2)
 idx = compare_NN > improvement_threshold
 xpoints=x[idx]
 ypoints=y[idx]
@@ -149,14 +149,14 @@ ypoints=new_y[idx]
 points = np.vstack([xpoints,ypoints]).T
 edges = alpha_shape(points,0.05)
 for a,(i,j) in enumerate(edges):
-    ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2)
+    ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2,linestyle=(0, (1, 10)))
 idx = compare_Spectral > improvement_threshold
 xpoints=new_x[idx]
 ypoints=new_y[idx]
 points = np.vstack([xpoints,ypoints]).T
 edges = alpha_shape(points,0.05)
 for a,(i,j) in enumerate(edges):
-    ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2)
+    ax_main.plot(points[[i, j], 0], points[[i, j], 1],"w",linewidth=2,linestyle=(0, (1, 10)))
 
 # this makes it look prettier
 
