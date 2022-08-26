@@ -56,13 +56,13 @@ def alpha_shape(points, alpha, only_outer=True):
             add_edge(edges, ic, ia)
     return edges
 
-
+num_classes = 2
 COMPARE = False# this is for the comparison of the two methods
 NN = False
 EIG = False
-f1 = "data/averaged_runs/Masters/7_GCN.txt"
-f2 = "data/averaged_runs/Masters/7_NN.txt"
-f3 = "data/averaged_runs/Masters/7_Spectral.txt"
+f1 = f"data/averaged_runs/Masters/{num_classes}_transformer.txt"
+f2 = f"data/averaged_runs/Masters/{num_classes}_NN.txt"
+f3 = f"data/averaged_runs/Masters/{num_classes}_Spectral.txt"
 test_accs = np.genfromtxt(f1)
 test_accs_vanilla = np.genfromtxt(f2)
 test_accs_spectral = np.genfromtxt(f3)
@@ -71,10 +71,11 @@ print(test_accs.shape)
 #note put the NN and the eigenvector in test_accs_vanilla
 x = test_accs[:,1]# lambda
 z = test_accs[:,0] #accs
-z = z.reshape(200,121)
-x = x.reshape(200,121)
+row_size = 121
+z = z.reshape(200,row_size)
+x = x.reshape(200,row_size)
 y = test_accs[:,2]# mu
-y = y.reshape(200,121)
+y = y.reshape(200,row_size)
 y = y
 first_z = z
 
@@ -103,8 +104,9 @@ kernel = np.array([[1,4,7,4,1],
                    [4,16,26,16,4],
                    [1,4,7,4,1]])
 z = convolve(z,kernel)/kernel.sum()
+z = convolve(z,kernel)/kernel.sum()
 
-new_Z = np.zeros((200,121))
+new_Z = np.zeros((200,row_size))
 for i in range(200):
     new_Z[i] = z[i] - test_accs_vanilla[i][0]
 compare_NN= new_Z
@@ -158,10 +160,10 @@ for a,(i,j) in enumerate(edges):
 
 # this makes it look prettier
 
-im_main = ax_main.scatter(x,y,c=z,cmap="coolwarm",vmin=.5,vmax=1)
-ax_NN.scatter(NN_y,NN_x,c=NN_c,cmap="coolwarm",vmin=0.5,vmax=1)
-ax_Spectral.scatter(S_y,S_x,c=S_c,cmap="coolwarm",vmin=0.5,vmax=1)
-ax_Spectral.plot([-3,0],[0,0],"--k")
+im_main = ax_main.scatter(x,y,c=z,cmap="coolwarm",vmin=1/num_classes,vmax=1)
+ax_NN.scatter(NN_y,NN_x,c=NN_c,cmap="coolwarm",vmin=1/num_classes,vmax=1)
+ax_Spectral.scatter(S_y,S_x,c=S_c,cmap="coolwarm",vmin=1/num_classes,vmax=1)
+#ax_Spectral.plot([-3,0],[0,0],"--k")
 plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,11]))
 
 ax_main.set_title(f"{f1} accuracy")
@@ -170,4 +172,10 @@ ax_main.set_ylabel("Feature cloud distance from origin")
 ax_NN.set_title(f"{f2} accuracy")
 ax_Spectral.set_title("Spectral clustering accuracy")
 ax_Spectral.set_xlabel("Normalized degree separation")
+
+# This is for plotting datasets
+# ax_main.scatter([6.545361984128282],[0.37839325207321856],c=np.array([.8]),s=200,cmap="coolwarm",vmin=.5,vmax=1,edgecolors="k")
+# ax_main.grid(False)
+
+
 plt.show()
