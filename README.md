@@ -12,3 +12,9 @@ I haven't added too much currently, so feel free to add more!
 - The tests folder contains models that test each step of the process and are able to plot the results found in data<br>
 ## Notes:
 - The Scaled versions of the 7-class GNNs areof size 24000 and not 24200 like the rest of them
+## Particular things to look at with plots(Headlines)
+- Some models are able to always exceed or at least approximate a Neural Network, the same is not true for spectral methods
+- Weak recovery phase transitions take on a particular shape for each model and we able to see that in each plot
+- Powerlaw distributions outperform uniform distributions
+- Transformers and SAGE are able to utilize negative edge information(heterophily) more successfully than GCN and GAT are able to.
+- We can very acutely compare the Dissasortative and Assortative cases.
