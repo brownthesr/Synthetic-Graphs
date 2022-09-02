@@ -57,12 +57,19 @@ def alpha_shape(points, alpha, only_outer=True):
     return edges
 
 num_classes = 2
-COMPARE = False# this is for the comparison of the two methods
-NN = False
-EIG = False
-f1 = f"data/averaged_runs/Masters/{num_classes}_transformer.txt"
+DC = False
+model = "GCN"
+show_positive = False
+show_negative = False
+
 f2 = f"data/averaged_runs/Masters/{num_classes}_NN.txt"
-f3 = f"data/averaged_runs/Masters/{num_classes}_Spectral.txt"
+if DC:
+    f1 = f"data/averaged_runs/Masters/{num_classes}_DC_{model}.txt"
+    f3 = f"data/averaged_runs/Masters/{num_classes}_DC_Spectral.txt"
+else:
+    f1 = f"data/averaged_runs/Masters/{num_classes}_{model}.txt"
+    f3 = f"data/averaged_runs/Masters/{num_classes}_Spectral.txt"
+
 test_accs = np.genfromtxt(f1)
 test_accs_vanilla = np.genfromtxt(f2)
 test_accs_spectral = np.genfromtxt(f3)
@@ -122,7 +129,9 @@ idx = compare_NN < -improvement_threshold
 xpoints=x[idx]
 ypoints=y[idx]
 points = np.vstack([xpoints,ypoints]).T
-if len(points )> 4:
+
+#plots the regions where the model performed worse than the spectral methods
+if len(points )> 4 and show_negative:
     edges = alpha_shape(points,0.05)
     for a,(i,j) in enumerate(edges):
         ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2)
@@ -130,10 +139,12 @@ idx = compare_NN > improvement_threshold
 xpoints=x[idx]
 ypoints=y[idx]
 points = np.vstack([xpoints,ypoints]).T
-if len(points )> 4:
+
+#plots the regions where the model performed better than the spectral methods
+if len(points )> 4 and show_positive:
     edges = alpha_shape(points,0.05)
     for a,(i,j) in enumerate(edges):
-        ax_main.plot(points[[i, j], 0], points[[i, j], 1],"w",linewidth=2)
+        ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2)
 
 new_x = x[:,60:]
 new_y = y[:,60:]
@@ -148,21 +159,26 @@ xpoints=new_x[idx]
 ypoints=new_y[idx]
 points = np.vstack([xpoints,ypoints]).T
 edges = alpha_shape(points,0.05)
-for a,(i,j) in enumerate(edges):
-    ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2,linestyle=(0, (1, 10)))
+
+if show_negative:
+    for a,(i,j) in enumerate(edges):
+        ax_main.plot(points[[i, j], 0], points[[i, j], 1],"w",linewidth=2,linestyle=(0, (1, 10)))
 idx = compare_Spectral > improvement_threshold
 xpoints=new_x[idx]
 ypoints=new_y[idx]
 points = np.vstack([xpoints,ypoints]).T
 edges = alpha_shape(points,0.05)
-for a,(i,j) in enumerate(edges):
-    ax_main.plot(points[[i, j], 0], points[[i, j], 1],"w",linewidth=2,linestyle=(0, (1, 10)))
+
+#plots where the model performed better than the NN
+if show_positive:
+    for a,(i,j) in enumerate(edges):
+        ax_main.plot(points[[i, j], 0], points[[i, j], 1],"w",linewidth=2)
 
 # this makes it look prettier
 
-im_main = ax_main.scatter(x,y,c=z,cmap="coolwarm",vmin=1/num_classes,vmax=1)
-ax_NN.scatter(NN_y,NN_x,c=NN_c,cmap="coolwarm",vmin=1/num_classes,vmax=1)
-ax_Spectral.scatter(S_y,S_x,c=S_c,cmap="coolwarm",vmin=1/num_classes,vmax=1)
+im_main = ax_main.scatter(x,y,c=z,cmap="coolwarm",vmin=1/2,vmax=1)
+ax_NN.scatter(NN_y,NN_x,c=NN_c,cmap="coolwarm",vmin=1/2,vmax=1)
+ax_Spectral.scatter(S_y,S_x,c=S_c,cmap="coolwarm",vmin=1/2,vmax=1)
 #ax_Spectral.plot([-3,0],[0,0],"--k")
 plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,11]))
 
@@ -173,9 +189,8 @@ ax_NN.set_title(f"{f2} accuracy")
 ax_Spectral.set_title("Spectral clustering accuracy")
 ax_Spectral.set_xlabel("Normalized degree separation")
 
-# This is for plotting datasets
+# # This is for plotting datasets
 # ax_main.scatter([6.545361984128282],[0.37839325207321856],c=np.array([.8]),s=200,cmap="coolwarm",vmin=.5,vmax=1,edgecolors="k")
 # ax_main.grid(False)
-
 
 plt.show()
