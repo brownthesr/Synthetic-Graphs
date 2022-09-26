@@ -230,7 +230,7 @@ def generate_csbm(avg_degree,degree_separation,feature_separation,num_features,n
     return train_adj,train_b,train_communities, test_adj,test_b,test_communities
 
 def generate_csbm_modified(avg_degree,degree_separation,
-        origin_distance,num_features,num_nodes,num_classes):
+        origin_distance,num_features,num_nodes,num_classes,std = .2):
     """Creates a Modified Contextual Stochastic Block Model
 
     This is very similar to the original implementation of the CSBM
@@ -246,6 +246,7 @@ def generate_csbm_modified(avg_degree,degree_separation,
         num_features (int): The number of features to generate.
         num_nodes (int): The number nodes to generate.
         num_classes (int): The number of classes to generate
+        std (float): The standard deviation for the gaussian clouds
 
     Returns:
         Adjacency matrices for a training and testing set.
@@ -261,12 +262,12 @@ def generate_csbm_modified(avg_degree,degree_separation,
     while np.linalg.norm(random_vec) ==0:
         random_vec = np.random.normal(0,1/num_features,(num_features))
     random_vec = random_vec/np.linalg.norm(random_vec)
-    random_vec *= .3
+    random_vec *= 1.0
     # obtains the random normal vector u how far our clouds are from the origin
 
     train_adj, train_communities = generate_ssbm(num_nodes,num_classes,p_in,p_out)
      # obtains the graph structure
-    train_z = np.random.normal(0,.2,(num_nodes,num_features))
+    train_z = np.random.normal(0,std,(num_nodes,num_features))
     # obtains the random noise vector i presume
     train_v = train_communities # puts the groups into a format for the equations
 
@@ -281,7 +282,7 @@ def generate_csbm_modified(avg_degree,degree_separation,
     # recompute all this but for a test set
     test_adj, test_communities = generate_ssbm(num_nodes,num_classes,p_in,p_out)
     # change graph structure
-    test_z = np.random.normal(0,.2,(num_nodes,num_features))
+    test_z = np.random.normal(0,std,(num_nodes,num_features))
     # change the noise vector, but don't change the community centers
     test_b = np.zeros((num_nodes,num_features))
     test_v = test_communities
@@ -544,7 +545,7 @@ def xor_sbm(num_nodes, feat_dim, intra, inter, log_scaling):
     return features, adj, test_features, test_adj, communities
 
 def generate_cdcbm(avg_degree,degree_separation,
-        origin_distance,num_features,num_nodes,num_classes,gamma):
+        origin_distance,num_features,num_nodes,num_classes,gamma,std = .2):
     """Creates DCBM with Feature information
 
     Args:
@@ -557,6 +558,7 @@ def generate_cdcbm(avg_degree,degree_separation,
         num_nodes (int): The number nodes to generate.
         num_classes (int): The number of classes to generate
         gamma (float): The degree of the power law distribution
+        std (float): The standard deviation for the gaussian clouds
 
     Returns:
         Adjacency matrices for a training and testing set.
@@ -572,12 +574,12 @@ def generate_cdcbm(avg_degree,degree_separation,
     while np.linalg.norm(random_vec) ==0:
         random_vec = np.random.normal(0,1/num_features,(num_features))
     random_vec = random_vec/np.linalg.norm(random_vec)
-    random_vec *= .3
+    random_vec *= 1
     # obtains the random normal vector u how far our clouds are from the origin
 
     train_adj, train_communities = generate_dcbm(num_nodes,num_classes,p_in,p_out,avg_degree,gamma)
      # obtains the graph structure
-    train_z = np.random.normal(0,.2,(num_nodes,num_features))
+    train_z = np.random.normal(0,std,(num_nodes,num_features))
     # obtains the random noise vector i presume
     train_v = train_communities # puts the groups into a format for the equations
 
@@ -592,7 +594,7 @@ def generate_cdcbm(avg_degree,degree_separation,
     # recompute all this but for a test set
     test_adj, test_communities = generate_dcbm(num_nodes,num_classes,p_in,p_out,avg_degree,gamma)
     # change graph structure
-    test_z = np.random.normal(0,.2,(num_nodes,num_features))
+    test_z = np.random.normal(0,std,(num_nodes,num_features))
     # change the noise vector, but don't change the community centers
     test_b = np.zeros((num_nodes,num_features))
     test_v = test_communities

@@ -59,7 +59,7 @@ def alpha_shape(points, alpha, only_outer=True):
 num_classes = 2
 DC = False
 model = "GCN"
-show_positive = False
+show_positive = True
 show_negative = False
 
 f2 = f"data/averaged_runs/Masters/{num_classes}_NN.txt"
@@ -79,6 +79,8 @@ print(test_accs.shape)
 x = test_accs[:,1]# lambda
 z = test_accs[:,0] #accs
 row_size = 121
+# there is one or two sets where the model due to a bug has a row size of 122. So changing this will fix that
+
 z = z.reshape(200,row_size)
 x = x.reshape(200,row_size)
 y = test_accs[:,2]# mu
@@ -132,7 +134,7 @@ points = np.vstack([xpoints,ypoints]).T
 
 #plots the regions where the model performed worse than the spectral methods
 if len(points )> 4 and show_negative:
-    edges = alpha_shape(points,0.05)
+    edges = alpha_shape(points,0.5/3)
     for a,(i,j) in enumerate(edges):
         ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2)
 idx = compare_NN > improvement_threshold
@@ -142,7 +144,7 @@ points = np.vstack([xpoints,ypoints]).T
 
 #plots the regions where the model performed better than the spectral methods
 if len(points )> 4 and show_positive:
-    edges = alpha_shape(points,0.05)
+    edges = alpha_shape(points,0.5/3)
     for a,(i,j) in enumerate(edges):
         ax_main.plot(points[[i, j], 0], points[[i, j], 1],"k",linewidth=2)
 
@@ -158,7 +160,7 @@ idx = compare_Spectral < -improvement_threshold
 xpoints=new_x[idx]
 ypoints=new_y[idx]
 points = np.vstack([xpoints,ypoints]).T
-edges = alpha_shape(points,0.05)
+edges = alpha_shape(points,0.5/3)
 
 if show_negative:
     for a,(i,j) in enumerate(edges):
@@ -167,7 +169,7 @@ idx = compare_Spectral > improvement_threshold
 xpoints=new_x[idx]
 ypoints=new_y[idx]
 points = np.vstack([xpoints,ypoints]).T
-edges = alpha_shape(points,0.05)
+edges = alpha_shape(points,0.5/3)
 
 #plots where the model performed better than the NN
 if show_positive:
@@ -179,18 +181,17 @@ if show_positive:
 im_main = ax_main.scatter(x,y,c=z,cmap="coolwarm",vmin=1/2,vmax=1)
 ax_NN.scatter(NN_y,NN_x,c=NN_c,cmap="coolwarm",vmin=1/2,vmax=1)
 ax_Spectral.scatter(S_y,S_x,c=S_c,cmap="coolwarm",vmin=1/2,vmax=1)
-#ax_Spectral.plot([-3,0],[0,0],"--k")
+ax_Spectral.plot([-3,0],[0,0],"--k")
 plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,11]))
-
-ax_main.set_title(f"{f1} accuracy")
+ax_main.set_title(f"{num_classes} class {model} accuracy")
 ax_main.grid(color="white")
-ax_main.set_ylabel("Feature cloud distance from origin")
-ax_NN.set_title(f"{f2} accuracy")
+ax_main.set_ylabel("Feature information")
+ax_NN.set_title(f"NN accuracy")
 ax_Spectral.set_title("Spectral clustering accuracy")
-ax_Spectral.set_xlabel("Normalized degree separation")
+ax_Spectral.set_xlabel("Edge information")
 
-# # This is for plotting datasets
-# ax_main.scatter([6.545361984128282],[0.37839325207321856],c=np.array([.8]),s=200,cmap="coolwarm",vmin=.5,vmax=1,edgecolors="k")
+# This is for plotting dataset points
+# ax_main.scatter([ 10.25],[.378],c=np.array([.813]),s=200,cmap="coolwarm",vmin=1/10,vmax=1,edgecolors="k")
 # ax_main.grid(False)
 
 plt.show()

@@ -94,3 +94,5 @@ to the left as it does with the other two, This could indicate that heterophily 
     Same for GAT
     The Appears to be the same for DC and non DC with the exception that spectral methods have a larger region where they outperform the 
 SAGE model.
+
+Increasing the Node Size by 10 and 20 had virtually no effect

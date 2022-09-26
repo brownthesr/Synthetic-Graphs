@@ -188,10 +188,10 @@ for model in models:
             #ax_Spectral.plot([-3,0],[0,0],"--k")
             plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,11]))
 
-            ax_main.set_title(f"{f1} accuracy")
+            ax_main.set_title(f"{num_classes} class {model} accuracy")
             ax_main.grid(color="white")
             ax_main.set_ylabel("Feature cloud distance from origin")
-            ax_NN.set_title(f"{f2} accuracy")
+            ax_NN.set_title(f"NN accuracy")
             ax_Spectral.set_title("Spectral clustering accuracy")
             ax_Spectral.set_xlabel("Normalized degree separation")
 

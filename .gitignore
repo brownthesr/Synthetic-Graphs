@@ -2,3 +2,5 @@
 data
 scripts/xor_data.py
 tests/work_bench.py
+tests/fix_stuff.py
+scripts/SBM.ipynb
