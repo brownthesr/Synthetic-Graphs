@@ -65,7 +65,7 @@ model = "GCN"
 show_positive = True
 show_negative = False
 fig = plt.figure()
-gs = GridSpec(11,22)
+gs = GridSpec(11,23)
 ax_main = [1,2]
 ax_main[0] = fig.add_subplot(gs[0:10,0:10])
 ax_main[1] = fig.add_subplot(gs[0:10,10:20],sharey = ax_main[0])
@@ -193,7 +193,7 @@ for p,D in enumerate(DC):
 
     ax_Spectral[p].scatter(S_y,S_x,c=S_c,cmap="coolwarm",vmin=1/2,vmax=1)
     ax_Spectral[p].plot([-3,0],[0,0],"--k")
-    plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,21]))
+    plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,22]))
     if DC:
         ax_main[p].set_title(f"{num_classes} class DC {model}")
     else:

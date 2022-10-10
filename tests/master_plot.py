@@ -1,3 +1,8 @@
+"""This is where we plot the results for our different tests! 
+Due to the issues of some of the results not plotting correcly, at times it is necessary to change the shape
+to match the distribution. However most of the results have dimensions 121x200
+"""
+
 from telnetlib import XASCII
 from tkinter.messagebox import YES
 import matplotlib.pyplot as plt
@@ -99,7 +104,7 @@ print(test_accs_vanilla.shape)
 f1 = f1[27:-4]
 f2 = f2[27:-4]
 fig = plt.figure()
-gs = GridSpec(11,12)
+gs = GridSpec(11,13)
 ax_main = fig.add_subplot(gs[0:10,0:10])
 ax_NN = fig.add_subplot(gs[:10,10],sharey = ax_main)
 ax_Spectral = fig.add_subplot(gs[10,0:10],sharex=ax_main)
@@ -182,7 +187,7 @@ im_main = ax_main.scatter(x,y,c=z,cmap="coolwarm",vmin=1/2,vmax=1)
 ax_NN.scatter(NN_y,NN_x,c=NN_c,cmap="coolwarm",vmin=1/2,vmax=1)
 ax_Spectral.scatter(S_y,S_x,c=S_c,cmap="coolwarm",vmin=1/2,vmax=1)
 ax_Spectral.plot([-3,0],[0,0],"--k")
-plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,11]))
+plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,12]))
 ax_main.set_title(f"{num_classes} class {model} accuracy")
 ax_main.grid(color="white")
 ax_main.set_ylabel("Feature information")

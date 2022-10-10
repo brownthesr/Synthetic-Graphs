@@ -66,7 +66,7 @@ models = ["GCN","GAT","SAGE","Transformer"]
 show_positive = True
 show_negative = False
 fig = plt.figure()
-gs = GridSpec(11,42)
+gs = GridSpec(11,43)
 ax_main = [1,2,3,4]
 ax_main[0] = fig.add_subplot(gs[0:10,0:10])
 ax_main[1] = fig.add_subplot(gs[0:10,10:20],sharey = ax_main[0])
@@ -200,14 +200,14 @@ for p,model in enumerate(models):
 
     ax_Spectral[p].scatter(S_y,S_x,c=S_c,cmap="coolwarm",vmin=1/2,vmax=1)
     ax_Spectral[p].plot([-3,0],[0,0],"--k")
-    plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,41]))
+    plt.colorbar(im_main, ax=ax_main,cax = fig.add_subplot(gs[0:10,42]))
     ax_main[p].set_title(f"{num_classes} class {model}")
     ax_main[p].grid(color="white")
     ax_main[0].set_ylabel("Feature information")
     ax_NN.set_title(f"NN")
     ax_Spectral[p].set_title("Spectral clustering accuracy")
     ax_Spectral[p].set_xlabel("Edge information")
-
+#plt.xlabel("Edge information")
 
 ax_NN.scatter(NN_y,NN_x,c=NN_c,cmap="coolwarm",vmin=1/2,vmax=1)
 # This is for plotting datasets
