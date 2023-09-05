@@ -1,7 +1,7 @@
 # Synthetic-Graphs
 ---
-This is the repository where we can put our code for the Synthetic graph stuff<br>
-I haven't added too much currently, so feel free to add more!
+This is the repository where we can put our code for the Synthetic graph stuff. In this project we investigate how various properties of training data affect the performance and convergence of graph neural network architectures.
+In particular we study how attributes such as Degree Distribution, Heterophily, and abundance of Graphlets play a role in the performance of these GNNs. We find that GNNs perform well under heterophily given that the degree of heterophily is great enough. Furthermore, GNNs perform better on scale free graphs and graphlets are not helpful for GNN performance.
 ## Directory
 ---
 - The data folder contains all the data obtained from test runs.<br>
