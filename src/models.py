@@ -112,6 +112,9 @@ class Spectral:
 class Leiden:
     def string():
         return "Leiden"
+class GraphTool:
+    def string():
+        return "GraphTool"
 
 class TopGCN(torch.nn.Module):
     """

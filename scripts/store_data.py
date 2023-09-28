@@ -6,6 +6,7 @@ import sys
 from copy import deepcopy
 import numpy as np
 import torch
+import time as time
 import torch.nn as nn
 import torch.nn.functional as F
 from src.generate_data import *
@@ -18,37 +19,45 @@ from src.Graph_transformer.data import *
 from itertools import permutations
 from sklearn.cluster import SpectralClustering
 import igraph as ig
+# import graph_tool.all as gt
 import leidenalg as la
 
 # these are to support Parallelizability
 comp_id = int(sys.argv[1])
+# The maximum number of computers we will be using
 MAX_COMPS = 200.0
-MAX_MU = 6.0
-MAX_LAMB = 3.0
-mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
-# of the two classes, increasing this means increasing difference between class features
 
-d=10 # this is the average degree
-lamb = -3 # difference in edge_densities, 0 indicates only node
+# Parameter ranges
 # features are informative lamb>0 means more intra edges vs inter edges(homophily)
 # lamb < 0 means less intra edges vs inter edges(heterophily)
-num_nodes = 1000
-num_features = 10
+MAX_MU = float(sys.argv[2])
+MAX_LAMB = float(sys.argv[3])
+
+
+d=float(sys.argv[4])# this is the average degree
+num_nodes = int(sys.argv[5])
+num_features = int(sys.argv[6])
+num_classes=int(sys.argv[7])
+degree_corrected = (sys.argv[8] == "True")
+max_values = sys.argv[9] == "True"
+device = "cpu"
+
+mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
+lamb = -10 # difference in edge_densities, 0 indicates only node
+# of the two classes, increasing this means increasing difference between class features
 gamma = 2.5
-num_classes=int(sys.argv[2])
 # this is so we can better parralelize things
 
 
 # our hyperparameter for our hidden model
-hidden_layers = 10
+hidden_layers = 16
 lr = .01
 epochs = 400
 
 
-runs = 1
+runs = 10
 all_accs = []
-models = [GraphTransformer]
-degree_corrected = False
+models = [GCN]# this is where you add the models that you want to run
 # even further
 
 def mu_loop(mu, lamb, model_type):
@@ -93,7 +102,7 @@ def runs_loop(mu, lamb, model_type):
     Returns:
         average_acc: the average accuracy
     """
-    average_acc = 0
+    average_accs = []
     if models[model_type].string() == "Spectral":
         for run in range(runs):
             model = SpectralClustering(num_classes,affinity = "precomputed", n_init = 100)
@@ -107,20 +116,65 @@ def runs_loop(mu, lamb, model_type):
                 acc1 = accuracy(out,test_mask,perm[test_labels])
                 accuracies.append(acc1)
             partial_acc = np.max(accuracies)
-            average_acc += partial_acc/runs
-        return average_acc
+            average_accs.append(partial_acc)
+
+        if max_values:
+            return np.max(average_accs)
+        else:
+            return np.mean(average_accs)
+    if models[model_type].string() == "GraphTool":
+        for run in range(runs):
+            g = gt.Graph(directed=False)
+            train_edge_list, train_b, train_labels, train_mask, \
+                test_edge_list, test_b, test_labels, test_mask = get_dataset(mu,lamb)
+            test_edge_list = test_edge_list.numpy()
+            test_labels = test_labels.numpy()
+            test_mask = test_mask.numpy()
+            g.add_vertex(num_nodes)
+            g.add_edge_list(test_edge_list)
+            state = gt.minimize_blockmodel_dl(g)
+            communities = list(state.get_blocks())
+            communities = np.array(communities)
+            old_labels = list(set(communities))
+            new_labels = np.arange(len(old_labels))
+            simplifier = dict(zip(old_labels,new_labels))
+            simplified_communities = np.vectorize(simplifier.get)(communities)
+
+            accuracies = []
+            for cur_label in permutations(new_labels):
+                perm = np.array(curr_label)
+                acc1 = accuracy(perm[simplified_communities],test_mask,test_labels)
+                accuracies.append(acc1)
+            partial_acc = np.max(accuracies)
+            average_accs.append(partial_acc)
+        if max_values:
+            return np.max(average_accs)
+        else:
+            return np.mean(average_accs)
     if models[model_type].string() == "Leiden":
         for run in range(runs):
             model = Leiden()
             test_adj, test_mask, test_labels = get_dataset(mu,lamb, adj =True)
             g = ig.Graph.Adjacency((test_adj> 0).tolist())
-            partition = la.CPMVertexPartition(g, 
+            if lamb >= 0:
+                partition = la.CPMVertexPartition(g, 
                                   initial_membership=np.random.choice(num_classes, num_nodes),
                                   resolution_parameter=0.5)
-            opt = la.Optimiser()
-            opt.consider_empty_community = False
-            opt.optimise_partition(partition)
-            out = partition.membership
+                opt = la.Optimiser()
+                opt.consider_empty_community = False
+                opt.optimise_partition(partition,n_iterations = 100)
+                out = partition.membership
+            else:
+                p_01,p_0,p_1 = la.CPMVertexPartition.Bipartite(g, 
+                                    types=np.random.choice(num_classes, num_nodes),
+                                    resolution_parameter_01=0.5)
+                opt = la.Optimiser()
+                opt.consider_empty_community = False
+
+                opt.optimise_partition_multiplex([p_01, p_0, p_1],
+                                       layer_weights=[1, -1, -1])
+                out = p_1.membership
+            
             out = np.array(out)
             possible_labels = np.arange(num_classes)
             accuracies = []
@@ -129,18 +183,21 @@ def runs_loop(mu, lamb, model_type):
                 acc1 = accuracy(out,test_mask,perm[test_labels])
                 accuracies.append(acc1)
             partial_acc = np.max(accuracies)
-            average_acc += partial_acc/runs
-        return average_acc
+            average_accs.append(partial_acc)
+        if max_values:
+            return np.max(average_accs)
+        else:
+            return np.mean(average_accs)
     if models[model_type].string() == "Graph_transformer":
         for run in range(runs):
             model = GraphTransformer(in_size = num_features,
                                     num_class=num_classes,
-                                    d_model = hidden_layers,
-                                    dim_feedforward=2*hidden_layers,
+                                    d_model = 128,
+                                    dim_feedforward=2*128,
                                     num_layers=2,
                                     gnn_type='gcn',
                                     use_edge_attr=False,
-                                    num_heads = 10,
+                                    num_heads = 8,
                                     in_embed=False,
                                     se="gnn",
                                     use_global_pool=False
@@ -165,19 +222,29 @@ def runs_loop(mu, lamb, model_type):
             for test_batch in test_loader:
                 test_batch.cuda()
                 partial_acc = transformer_acc(model,test_batch,torch.ones(1000).bool())
-            average_acc += partial_acc/runs
-        return average_acc
+            average_accs.append(partial_acc)
+        if max_values:
+            return np.max(average_accs)
+        else:
+            return np.mean(average_accs)
 
     for run in range(runs):
+        np.random.seed(int(time.time()))
+        torch.manual_seed(int(time.time()))
         model,optimizer = get_model_data(model_type)
         train_edge_list, train_b, train_labels, train_mask, \
             test_edge_list, test_b, test_labels, test_mask = get_dataset(mu,lamb)
-        
+        train_edge_list, train_b, train_labels, train_mask, \
+            test_edge_list, test_b, test_labels, test_mask = train_edge_list.to(device), train_b.to(device), train_labels.to(device), train_mask.to(device), \
+            test_edge_list.to(device), test_b.to(device), test_labels.to(device), test_mask.to(device)
         model.train()
         train_model(model, optimizer, train_b, train_edge_list,train_mask,train_labels)
         partial_acc = get_acc(model, test_b, test_edge_list, test_mask, test_labels)
-        average_acc += partial_acc/runs
-    return average_acc
+        average_accs.append(partial_acc)
+    if max_values:
+        return np.max(average_accs)
+    else:
+        return np.mean(average_accs)
 
 def write_data(mu, lamb, test_acc, model_type):
     """Function in charge of writing data to files
@@ -204,7 +271,7 @@ def get_model_data(model_type):
         Model: the model to run tests on
         optimizer: an optimizer to optimize the model
     """
-    model = models[model_type](num_features,hidden_layers,num_classes)
+    model = models[model_type](num_features,hidden_layers,num_classes).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
     return model, optimizer
 
@@ -316,7 +383,6 @@ def get_acc(model, test_b, test_edge_list, test_mask, test_labels):
     return acc
 
 for i in range(len(models)):
-    all_accs = []
     mu_loop(mu, lamb, i)
 
 

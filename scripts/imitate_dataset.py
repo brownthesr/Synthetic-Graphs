@@ -1,6 +1,6 @@
 """
 This file is meant to imitate a certain benchmark graph given specified
-hyperparameters of a graph
+hyperparameters of a graph. This creates a SBM "like" the one specified by the hyperparameters
 """
 import sys
 from copy import deepcopy

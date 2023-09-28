@@ -1,7 +1,15 @@
 *.egg-info
 data
+old_plotters
 scripts/xor_data.py
 tests/work_bench.py
 tests/fix_stuff.py
+tests/store_plots.py
 scripts/SBM.ipynb
 scramble_gcn.py
+scripts/imitate_dataset.py
+scripts/SBM.ipynb
+plotting_scripts/master_plot.py
+work_bench.py
+lit_search.txt
+Notes.txt
