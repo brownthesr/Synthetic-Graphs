@@ -11,7 +11,7 @@ In particular we study how attributes such as Degree Distribution, Heterophily, 
 - The src folder contains modules that generate synthetic data, various Neural Network Architectures to operate on said data, and miscellaneous functions. These are found in the generate_data.py, models.py, and utils.py respectively.<br>
 - The tests folder contains models that test each step of the process and are able to plot the results found in data<br>
 ## Particular things to look at with plots(Headlines)
-- Higher order structure in graphs are detrimental to Graph Neural Network performance
+- Higher order structure in graphs are very influential in Graph Neural Network performance
 - Transformers and SAGE are able to utilize negative edge information(heterophily) more successfully than GCN and GAT are able to.
 - Powerlaw edge distributions outperform binomial edge distributions.
 - Some models are able to always exceed or at least approximate a Neural Network, the same is not true for spectral methods
