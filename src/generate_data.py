@@ -7,8 +7,8 @@ from scipy.stats import poisson
 from scipy.stats import bernoulli
 from src.utils import *
 
-def gen_stoney_sbm(num_nodes,power_law,num_classes,p_intra,p_inter):
-    """Generates a DC_SBM the way stoney proposed
+def gen_alternate_sbm(num_nodes,power_law,num_classes,p_intra,p_inter):
+    """Generates a DC_SBM 
 
     Args:
         num_nodes (int): The number of nodes.
