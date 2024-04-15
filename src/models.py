@@ -3,7 +3,7 @@ Contains all of the models that we want to run over our data.
 GCN/GAT/SAGE, NN, and GCNModified(specifying where to add
 comvolutions)
 """
-from torch_geometric.nn import GCNConv, GATConv,SAGEConv
+from torch_geometric.nn import GCNConv, GATv2Conv,SAGEConv
 from torch_geometric.nn import DenseGCNConv
 import torch.nn as nn
 from itertools import permutations 
@@ -83,9 +83,9 @@ class GAT(torch.nn.Module):
         Constructor of class
         """
         super().__init__()
-        self.conv1 = GATConv(in_feat, hid_feat)
+        self.conv1 = GATv2Conv(in_feat, hid_feat)
         #self.convh = GCNConv(hid_feat,hid_feat)
-        self.conv2 = GATConv(hid_feat, out_feat)
+        self.conv2 = GATv2Conv(hid_feat, out_feat)
         self.activation = nn.ReLU()
         self.log_soft = log_soft
         #self.dropout = nn.Dropout(p=.4)
