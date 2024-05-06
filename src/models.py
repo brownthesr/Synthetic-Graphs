@@ -3,7 +3,7 @@ Contains all of the models that we want to run over our data.
 GCN/GAT/SAGE, NN, and GCNModified(specifying where to add
 comvolutions)
 """
-from torch_geometric.nn import GCNConv, GATv2Conv,SAGEConv
+from torch_geometric.nn import GCNConv, GATv2Conv,SAGEConv, GPSConv
 from torch_geometric.nn import DenseGCNConv
 import torch.nn as nn
 from itertools import permutations 
@@ -41,6 +41,42 @@ class GCN(torch.nn.Module):
             return x
     def string():
         return "GCN"
+
+class GPS(torch.nn.Module):
+    """
+    Pytorch_Geometric implementation of GCN
+    """
+    def __init__(self, in_feat, hid_feat, out_feat, log_soft = True):
+        """
+        Constructor of class
+        """
+        super().__init__()
+        self.nn1 = nn.Linear(in_feat,hid_feat)
+        self.conv1 = GPSConv(hid_feat, conv=None)
+        #self.convh = GCNConv(hid_feat,hid_feat)
+        self.conv2 = GPSConv(hid_feat, conv=None)
+        self.activation = nn.ReLU()
+        self.nn2 = nn.Linear(hid_feat,out_feat)
+        self.log_soft = log_soft
+        #self.dropout = nn.Dropout(p=.4)
+
+    def forward(self, x,edge_index):
+        """
+        Runs forward propagation
+        """
+        x = self.nn1(x)
+        x = self.activation(self.conv1(x, edge_index))
+        x = F.dropout(x, training= self.training)
+        #x = self.activation(self.convh(x,edge_index))
+        #x = F.dropout(x,training=self.training)
+        x = self.conv2(x, edge_index)
+        x = self.nn2(x)
+        if self.log_soft is True:
+            return F.log_softmax(x,dim=1)
+        else:
+            return x
+    def string():
+        return "GPS"
 
 class SAGE(torch.nn.Module):
     """
