@@ -5,6 +5,13 @@ from tqdm import tqdm
 from torch_geometric.datasets import CitationFull,Amazon,Flickr,Yelp,IMDB,GitHub,FacebookPagePage,LastFMAsia,DeezerEurope,PolBlogs
 import pandas as pd
 from torch_geometric.loader import DataLoader
+
+### Dustin Addition
+import sys
+import os
+sys.path.append(os.path.abspath("/home/xiao/Desktop/GNN/Synthetic-Graphs-main"))
+### end Dustin Addition
+
 from src.Graph_transformer.data import *
 import networkx as nx
 from torch_geometric.nn import GCNConv,SAGEConv,GATConv
@@ -15,6 +22,14 @@ import torch.nn.functional as F
 import numpy as np
 import torch_geometric.transforms as T
 import torch
+
+### Dustin and Xiao Addition
+if torch.cuda.is_available():
+    device = 'gpu'
+
+else:
+    device = 'cpu'
+
 class GNN(torch.nn.Module):
     """Implementation of various Graph Neural Networks"""
     def __init__(self, in_feat, hid_feat, out_feat,type="GCN"):
@@ -101,22 +116,33 @@ def assess(read = True,model=None,optimizer = None,data = None,twice = False,tra
         return acc
     else:
         model.train()# tells our model we are about to train
-        
-        train_dset = [Data(x=data.x,edge_index=data.edge_index.long(),y=data.y).cuda()]
+
+        ### Dustin and Xiao addition
+        if device =='cpu':
+            train_dset = [Data(x=data.x,edge_index=data.edge_index.long(),y=data.y)]
+
+        else:
+            train_dset = [Data(x=data.x,edge_index=data.edge_index.long(),y=data.y).cuda()]
+            model.cuda()
+            data.train_mask.cuda()
+
         train_dset = GraphDataset(train_dset)
-        train_loader = DataLoader(train_dset,batch_size = 1, shuffle = False)
-        model.cuda()
+        train_loader = DataLoader(train_dset,batch_size = 1, shuffle = False)         
+
         optimizer.zero_grad()
-        data.train_mask.cuda()
+        
         for train_batch in train_loader:
-            train_batch.cuda()
+            if device=='gpu':
+                train_batch.cuda()
+                data.test_mask.cuda()
+
             train_transformer(train_batch,optimizer,model,data.train_mask)
         
-
         model.eval()
-        data.test_mask.cuda()
+        
         for test_batch in train_loader:
-            test_batch.cuda()
+            if device=='gpu':
+                test_batch.cuda()
             print("1 iteration DELETE ME")
             preds = model(test_batch).max(1)[1]
             acc = accuracy(preds,data.test_mask,data)
@@ -656,8 +682,10 @@ def run_dataset(name,t,mu,model_type):
         else:
             model = GNN(10,32,2,type=model_type)
         optimizer = torch.optim.Adam(params = model.parameters(), lr = .01,weight_decay=5e-4)
-        data = data.cuda()
-        model = model.cuda()
+
+        if device=='gpu':
+            data = data.cuda()
+            model = model.cuda()
 
         normal = assess(False,model,optimizer,data)
         data = data.cpu()
@@ -677,8 +705,9 @@ def run_dataset(name,t,mu,model_type):
 
         model = GNN(data.num_features,32,dataset.num_classes,type=model_type)
         optimizer = torch.optim.Adam(params = model.parameters(), lr = .01,weight_decay=5e-4)
-        data = data.cuda()
-        model = model.cuda()
+        if device=='gpu':
+            data = data.cuda()
+            model = model.cuda()
         scrambled = assess(False,model,optimizer,data)
         return normal,scrambled
     else:
@@ -695,8 +724,9 @@ def run_dataset(name,t,mu,model_type):
                                     use_global_pool=False
                                     )
         optimizer = torch.optim.Adam(params = model.parameters(), lr = .01,weight_decay=5e-4)
-        data = data.cuda()
-        model = model.cuda()
+        if device=='gpu':
+            data = data.cuda()
+            model = model.cuda()
 
         normal = assess(False,model,optimizer,data,transformer=True)
         data = data.cpu()
@@ -727,8 +757,11 @@ def run_dataset(name,t,mu,model_type):
                                     use_global_pool=False
                                     )
         optimizer = torch.optim.Adam(params = model.parameters(), lr = .01,weight_decay=5e-4)
-        data = data.cuda()
-        model = model.cuda()
+        
+        if device=='gpu':
+            data = data.cuda()
+            model = model.cuda()
+
         scrambled = assess(False,model,optimizer,data,transformer = True)
         return normal,scrambled
 
