@@ -3,12 +3,18 @@ Contains all of the models that we want to run over our data.
 GCN/GAT/SAGE, NN, and GCNModified(specifying where to add
 comvolutions)
 """
-from torch_geometric.nn import GCNConv, GATv2Conv,SAGEConv, GPSConv
+from torch_geometric.nn import GCNConv, GATv2Conv,SAGEConv, GPSConv,GINConv
 from torch_geometric.nn import DenseGCNConv
 import torch.nn as nn
+import torch_geometric
 from itertools import permutations 
+import  matplotlib.pyplot as plt
 import torch.nn.functional as F
 import torch
+
+class b(torch_geometric.nn.MessagePassing):
+    def forward(self,x,edge_index):
+        return self.propagate(edge_index,x=x)
 
 class GCN(torch.nn.Module):
     """
@@ -24,9 +30,10 @@ class GCN(torch.nn.Module):
         self.conv2 = GCNConv(hid_feat, out_feat)
         self.activation = nn.ReLU()
         self.log_soft = log_soft
+        self.propagate = b()
         #self.dropout = nn.Dropout(p=.4)
 
-    def forward(self, x,edge_index):
+    def forward(self, x,edge_index,pe=None):
         """
         Runs forward propagation
         """
@@ -51,20 +58,28 @@ class GPS(torch.nn.Module):
         Constructor of class
         """
         super().__init__()
-        self.nn1 = nn.Linear(in_feat,hid_feat)
-        self.conv1 = GPSConv(hid_feat, conv=None)
+        self.nn1 = nn.Linear(in_feat,hid_feat//2)
+        self.pe_norm = nn.BatchNorm1d(20)
+        self.pe_lin = nn.Linear(20,hid_feat//2)
+        self.conv1 = GPSConv(hid_feat, conv=GINConv(nn.Sequential(
+                nn.Linear(hid_feat, hid_feat))
+            ))
         #self.convh = GCNConv(hid_feat,hid_feat)
-        self.conv2 = GPSConv(hid_feat, conv=None)
+        self.conv2 = GPSConv(hid_feat, conv=GINConv(nn.Sequential(
+                nn.Linear(hid_feat, hid_feat))
+            ))
         self.activation = nn.ReLU()
         self.nn2 = nn.Linear(hid_feat,out_feat)
         self.log_soft = log_soft
+        self.hid_feat = hid_feat
         #self.dropout = nn.Dropout(p=.4)
 
-    def forward(self, x,edge_index):
+    def forward(self, x,edge_index,pe):
         """
         Runs forward propagation
         """
-        x = self.nn1(x)
+        x_pe = self.pe_norm(pe)
+        x = torch.cat((self.nn1(x), self.pe_lin(x_pe)), 1)
         x = self.activation(self.conv1(x, edge_index))
         x = F.dropout(x, training= self.training)
         #x = self.activation(self.convh(x,edge_index))
@@ -94,7 +109,7 @@ class SAGE(torch.nn.Module):
         self.log_soft = log_soft
         #self.dropout = nn.Dropout(p=.4)
 
-    def forward(self, x,edge_index):
+    def forward(self, x,edge_index,pe=None):
         """
         Runs forward propagation
         """
@@ -126,7 +141,7 @@ class GAT(torch.nn.Module):
         self.log_soft = log_soft
         #self.dropout = nn.Dropout(p=.4)
 
-    def forward(self, x,edge_index):
+    def forward(self, x,edge_index,pe=None):
         """
         Runs forward propagation
         """
@@ -196,7 +211,7 @@ class NN(torch.nn.Module):
         """
         Runs forward propagation
 
-        Adj is included just so that we can lop over this
+        Adj is included just so that we can loop over this
         """
         x = self.activation(self.lin1(x))
         #x = F.dropout(x, training= self.training)
