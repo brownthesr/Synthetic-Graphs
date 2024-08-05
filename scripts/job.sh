@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1   # number of processor cores (i.e. tasks)
 #SBATCH --nodes=1   # number of nodes
 #SBATCH --mem-per-cpu=2048M   # memory per CPU core
-#SBATCH -J "2 class GCNs"   # job name
+#SBATCH -J "GAT 2-class"   # job name
 #SBATCH --array=0-199
 #SBATCH --mail-type=FAIL
 
@@ -13,5 +13,5 @@
 export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
 
 # LOAD MODULES, INSERT CODE, AND RUN YOUR PROGRAMS HERE 
-source activate geo2
-python3 -u store_reg_models.py $SLURM_ARRAY_TASK_ID 2 3 10 1000 10 2 "False" "True"
+conda activate boydresearch
+python3 -u store_data.py $SLURM_ARRAY_TASK_ID 2 3 10 1000 10 2 "False" "True"

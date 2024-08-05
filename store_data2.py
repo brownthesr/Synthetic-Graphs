@@ -3,29 +3,45 @@ This file runs different models of GNNs on a wide variety of graph data
 and stores that data in the data folder
 """
 import sys
+print("1")
 from copy import deepcopy
+print("2")
 import numpy as np
+print("3")
 import torch
+print("4")
 import time as time
+print("5")
 import torch.nn as nn
+print("6")
 import torch.nn.functional as F
+print("7")
 from src.generate_data import *
+print("8")
 from src.models import *
+print("9")
 from src.utils import *
+print("10")
 from torch_geometric.data import Data
+print("11")
 from src.Graph_transformer.models import *
+print("12")
 from torch_geometric.loader import DataLoader
+print("13")
 from src.Graph_transformer.data import *
+print("14")
 from itertools import permutations
+print("15")
 from sklearn.cluster import SpectralClustering
+print("16")
 import igraph as ig
+print("17")
 # import graph_tool.all as gt
 import leidenalg as la
+print("18")
 
 # these are to support Parallelizability
 comp_id = int(sys.argv[1])
-
-print(f'{comp_id} is the sys.argv1')
 # The maximum number of computers we will be using
 MAX_COMPS = 200.0
 
@@ -42,7 +58,7 @@ num_features = int(sys.argv[6])
 num_classes=int(sys.argv[7])
 degree_corrected = (sys.argv[8] == "True")
 max_values = sys.argv[9] == "True"
-device = "cpu"
+device = "cuda"
 
 mu = 0 + MAX_MU/MAX_COMPS * comp_id# difference between the means
 lamb = -10 # difference in edge_densities, 0 indicates only node
@@ -59,7 +75,7 @@ epochs = 400
 
 runs = 1
 all_accs = []
-models = [GCN]# this is where you add the models that you want to run
+models = [GAT]# this is where you add the models that you want to run
 # even further
 
 def mu_loop(mu, lamb, model_type):
