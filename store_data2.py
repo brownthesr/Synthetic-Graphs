@@ -336,7 +336,7 @@ def train_model(model, optimizer, train_b, train_edge_list,train_mask,train_labe
         train_loss.backward()
         optimizer.step()
     #after having trained save model to trained_models
-    torch.save(model.state_dict(),f'trained_models/model_with{mu}mu_{lamb}lamb')
+    torch.save(model.state_dict(),f"trained_models/model_with{mu}mu_{lamb}lamb")
 
 def train_transformer(data,optimizer,model,mask):
     for epoch in range(epochs):# runs through all the data 200 times
@@ -348,7 +348,7 @@ def train_transformer(data,optimizer,model,mask):
         train_loss.backward()
         optimizer.step()
     #after having trained save model to trained_models
-        torch.save(model.state_dict(),f'trained_models/model_with{mu}mu_{lamb}lamb')
+        torch.save(model.state_dict(),f"trained_models/model_with{mu}mu_{lamb}lamb")
 
 def transformer_acc(model, data,test_mask):
     """Tests accuracy for model
