@@ -3,42 +3,24 @@ This file runs different models of GNNs on a wide variety of graph data
 and stores that data in the data folder
 """
 import sys
-print("1")
 from copy import deepcopy
-print("2")
 import numpy as np
-print("3")
 import torch
-print("4")
 import time as time
-print("5")
 import torch.nn as nn
-print("6")
 import torch.nn.functional as F
-print("7")
 from src.generate_data import *
-print("8")
 from src.models import *
-print("9")
 from src.utils import *
-print("10")
 from torch_geometric.data import Data
-print("11")
 from src.Graph_transformer.models import *
-print("12")
 from torch_geometric.loader import DataLoader
-print("13")
 from src.Graph_transformer.data import *
-print("14")
 from itertools import permutations
-print("15")
 from sklearn.cluster import SpectralClustering
-print("16")
 import igraph as ig
-print("17")
 # import graph_tool.all as gt
 import leidenalg as la
-print("18")
 
 # these are to support Parallelizability
 comp_id = int(sys.argv[1])
@@ -71,11 +53,9 @@ gamma = 2.5
 hidden_layers = 16
 lr = .01
 epochs = 400
-
-
 runs = 1
 all_accs = []
-models = [GAT]# this is where you add the models that you want to run
+models = [GCN]# this is where you add the models that you want to run
 # even further
 
 def mu_loop(mu, lamb, model_type):
@@ -259,6 +239,8 @@ def runs_loop(mu, lamb, model_type):
         train_model(model, optimizer, train_b, train_edge_list,train_mask,train_labels)
         partial_acc = get_acc(model, test_b, test_edge_list, test_mask, test_labels)
         average_accs.append(partial_acc)
+
+
     if max_values:
         return np.max(average_accs)
     else:
@@ -353,6 +335,8 @@ def train_model(model, optimizer, train_b, train_edge_list,train_mask,train_labe
         train_loss = F.nll_loss(out[train_mask], train_labels[train_mask])
         train_loss.backward()
         optimizer.step()
+    #after having trained save model to trained_models
+    torch.save(model.state_dict(),f'trained_models/model_with{mu}mu_{lamb}lamb')
 
 def train_transformer(data,optimizer,model,mask):
     for epoch in range(epochs):# runs through all the data 200 times
@@ -363,6 +347,8 @@ def train_transformer(data,optimizer,model,mask):
         train_loss = F.cross_entropy(out, data.y.squeeze())
         train_loss.backward()
         optimizer.step()
+    #after having trained save model to trained_models
+        torch.save(model.state_dict(),f'trained_models/model_with{mu}mu_{lamb}lamb')
 
 def transformer_acc(model, data,test_mask):
     """Tests accuracy for model
