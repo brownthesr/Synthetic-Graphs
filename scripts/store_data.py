@@ -55,8 +55,6 @@ gamma = 2.5
 hidden_layers = 16
 lr = .01
 epochs = 400
-
-
 runs = 1
 all_accs = []
 models = [GCN]# this is where you add the models that you want to run
