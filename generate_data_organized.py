@@ -140,6 +140,36 @@ def get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected
     
     return edge_list, features, labels
     
+#changing getcsbm to model trevor's theoretical work. run it to get results testing the theoretical results. changes it to be diametrically opposed
+def get_csbm2(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes):
+    c_in = average_degree+lamb*np.sqrt(average_degree) # c_in/c_out as described in the equations
+    c_out = average_degree-lamb*np.sqrt(average_degree)
+    p_in = c_in/num_nodes # compiles these to pass into the SSBM
+    p_out = c_out/num_nodes
+
+
+    class_size = num_nodes // num_classes
+    block_sizes = [class_size] * num_classes
+    # Generate block probabilities
+    p_matrix = np.full((num_classes, num_classes), p_out)
+    np.fill_diagonal(p_matrix, p_in)
+    # Generate SBM graph
+    sbm_graph = nx.stochastic_block_model(block_sizes, p_matrix).to_directed()
+    edge_list = torch.tensor(list(sbm_graph.edges()), dtype=torch.long).t()
+    n = class_size * num_classes
+    labels = torch.arange(num_classes).repeat_interleave(class_size)
+
+    features = torch.randn((n,num_features))
+    
+    #differing the seperation parameter to one dimension and to be subtracted from the other gaussian cloud
+    features[labels==0,0]+=mu
+    features[labels==1,0]-=mu
+    #commented out code is what was previously used
+    # features[torch.arange(n),labels] += mu
+    
+    
+    return edge_list, features, labels
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--comp_id", type=int,default=0, help= "This is the index of the parralelization, basically it tells us what mu to run")
 parser.add_argument("--max_comps", type=int,default=200, help= "The number of computers we are using in parrallel")
