@@ -573,7 +573,7 @@ def generate_cdcbm(avg_degree,degree_separation,
     random_vec = np.random.normal(0,1/num_features,(num_features))
     while np.linalg.norm(random_vec) ==0:
         random_vec = np.random.normal(0,1/num_features,(num_features))
-    random_vec = random_vec/np.linalg.norm(random_vec)
+    random_vec = random_vec/np.linalg.norm(random_vec)     
     random_vec *= 1
     # obtains the random normal vector u how far our clouds are from the origin
 
