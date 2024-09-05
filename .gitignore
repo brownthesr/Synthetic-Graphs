@@ -11,5 +11,6 @@ scripts/imitate_dataset.py
 scripts/SBM.ipynb
 plotting_scripts/master_plot.py
 work_bench.py
+runs/*
 lit_search.txt
 Notes.txt

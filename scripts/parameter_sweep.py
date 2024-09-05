@@ -9,7 +9,6 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch.nn.functional as F
-from generate_data2 import *
 from src.models import *
 from torch_geometric.data import Dataset
 import torch_geometric.transforms as T
@@ -21,13 +20,14 @@ from src.Graph_transformer.data import *
 from itertools import permutations
 from sklearn.cluster import SpectralClustering
 
-def accuracy_1(preds,labels):
+def accuracy(preds,labels):
     """
     Obtains the accuracy of a model
     """
     correct = (preds == labels).sum()
     acc = int(correct)/len(labels)
     return acc
+
 def store_acc(test_acc, lamb, mu, model_type, num_classes):
     """Function in charge of writing data to files
 
@@ -43,7 +43,8 @@ def store_acc(test_acc, lamb, mu, model_type, num_classes):
         np.savetxt(f"{folder}/{num_classes}_DC_{model_type.string()}({args.comp_id}).txt",all_accs)
     else:
         np.savetxt(f"{folder}/{num_classes}_{model_type.string()}({args.comp_id}).txt",all_accs)
-def get_model(model_type, num_features, hidden_layers, out_features):
+
+def get_model_and_optimizer(model_type, num_features, hidden_layers, out_features):
     """Obtains objects for the model
 
     Args:
@@ -99,6 +100,7 @@ def train_transformer_model(model,optimizer,dataset):
             train_loss = F.cross_entropy(out, data.y.squeeze())
             train_loss.backward()
             optimizer.step()
+
 def train_GPS(model,optimizer,dataset):
     train_edge_list, train_features, train_labels = dataset
     transform = T.AddRandomWalkPE(walk_length=20, attr_name='pe')
@@ -113,6 +115,7 @@ def train_GPS(model,optimizer,dataset):
         train_loss = F.cross_entropy(out, data.y.squeeze())
         train_loss.backward()
         optimizer.step()
+        
 def get_data(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes):
     return get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes),get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes)
 
@@ -164,28 +167,52 @@ mu_range = [args.comp_id/args.max_comps*args.mu_max]
 lambda_range = torch.linspace(args.lambda_min,args.lambda_max,121)
 models = [eval(m) for m in args.models]
 print(models)
+
+# Loop through each model
 for model_type in models:
+    # Define a list for storing the accuracy
+    # Note we are storing this in long form data to ensure compatability with pandas df 
+    # eg: [[acc_1, lamb_1, mu_1],
+    #      [acc_2, lambd_2, mu_2],...]
     all_accs = []   
+    
     if model_type in [GCN, SAGE, GAT]:
+        # Loop through the Lambda and Mu parameters
         for mu in mu_range:
             for lamb in lambda_range:
-                accs = []
+                # We define a list of sample accuracies and take the best of n runs
+                sample_accs = []
                 for run in range(args.runs):
+                    # Get the dataset
                     train_dataset, test_dataset = get_data(num_nodes=args.num_nodes, num_features=args.num_features, 
                                                            average_degree=args.average_degree, mu=mu, lamb=lamb, 
                                                            degree_corrected=args.degree_corrected, num_classes=args.num_classes)
-                    model, optimizer = get_model(model_type,args.num_features, args.hidden_features, args.num_classes)
+                    # Get the model and optimizer
+                    model = model_type(args.num_features, args.hidden_features, args.num_classes)
+                    optimizer = torch.optim.Adam(params=model.parameters(), lr = args.lr)
+                    
+                    # Set the model to the current device (hopefully cuda)
                     model = model.to(args.device)
+                    
+                    # Train the model
                     train_model(model,optimizer,train_dataset)
-                    accs.append(accuracy_1(torch.argmax(model(test_dataset[1].to(args.device),test_dataset[0].to(args.device)),dim=-1),test_dataset[2].to(args.device)))
-                print(max(accs),lamb,mu)
-                store_acc(max(accs),lamb,mu,model_type,args.num_classes)
+                    
+                    # Append the accuracy
+                    sample_accs.append(accuracy(torch.argmax(model(test_dataset[1].to(args.device),test_dataset[0].to(args.device)),dim=-1),test_dataset[2].to(args.device)))
+                print(max(sample_accs),lamb,mu)
+                store_acc(max(sample_accs),lamb,mu,model_type,args.num_classes)
+                
     elif model_type is  GraphTransformer:
+        # Loop through parameter space
         for mu in mu_range:
             for lamb in lambda_range:
-                accs = []
+                # Define accuracy list to max over
+                sample_accs = []
                 for run in range(args.runs):
+                    # Get datasets
                     train_dataset, test_dataset = get_data(args.num_nodes, args.num_features, args.average_degree, mu, lamb, args.degree_corrected, args.num_classes)
+                    
+                    # Get the model and optimizer
                     model = GraphTransformer(in_size = args.num_features,
                                     num_class=args.num_classes,
                                     d_model = args.hidden_features,
@@ -200,6 +227,8 @@ for model_type in models:
                                     ,device = args.device
                                     )
                     optimizer = torch.optim.Adam(params=model.parameters(),lr = args.lr)
+                    
+                    # Train the transformer model
                     train_transformer_model(model,optimizer,train_dataset)
                     test_edge_list, test_features, test_labels = test_dataset
                     test_data = [Data(x=test_features,edge_index=test_edge_list.long(),y=test_labels)]
@@ -208,16 +237,19 @@ for model_type in models:
                     for batch in test_loader:
                         batch = batch.to(args.device)
                         out = model(batch)
-                        accs.append(accuracy_1(torch.argmax(out,dim=-1),test_dataset[2].to(args.device)))
-                print(max(accs),lamb,mu)
-                store_acc(max(accs),lamb,mu,model_type,args.num_classes)
+                        sample_accs.append(accuracy(torch.argmax(out,dim=-1),test_dataset[2].to(args.device)))
+                print(max(sample_accs),lamb,mu)
+                store_acc(max(sample_accs),lamb,mu,model_type,args.num_classes)
     elif model_type == GPS:
+        # Loop through parameter space
         for mu in mu_range:
             for lamb in lambda_range:
-                accs = []
+                # Define list to take max over
+                sample_accs = []
                 for run in tqdm(range(args.runs)):
                     train_dataset, test_dataset = get_data(args.num_nodes, args.num_features, args.average_degree, mu, lamb, args.degree_corrected, args.num_classes)
-                    model, optimizer = get_model(model_type,args.num_features, args.hidden_features, args.num_classes)
+                    model = model_type(args.num_features, args.hidden_features, args.num_classes)
+                    optimizer = torch.optim.Adam(params=model.parameters(), lr = args.lr)                    
                     model = model.to(args.device)
                     train_GPS(model,optimizer,train_dataset)
                     test_edge_list, test_features, test_labels = test_dataset
@@ -226,6 +258,6 @@ for model_type in models:
                     test_data = transform(Data(x=test_features,edge_index=test_edge_list.long(),y=test_labels))
                     data = test_data.to(args.device)
                     out = model(data.x,data.edge_index,data.pe)
-                    accs.append(accuracy_1(torch.argmax(out,dim=-1),test_dataset[2].to(args.device)))
-                print(max(accs),lamb,mu)
-                store_acc(max(accs),lamb,mu,model_type,args.num_classes)
+                    sample_accs.append(accuracy(torch.argmax(out,dim=-1),test_dataset[2].to(args.device)))
+                print(max(sample_accs),lamb,mu)
+                store_acc(max(sample_accs),lamb,mu,model_type,args.num_classes)

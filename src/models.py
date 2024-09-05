@@ -38,7 +38,7 @@ class GCN(torch.nn.Module):
         Runs forward propagation
         """
         x = self.activation(self.conv1(x, edge_index))
-        x = F.dropout(x, training= self.training)
+        # x = F.dropout(x, training= self.training)
         #x = self.activation(self.convh(x,edge_index))
         #x = F.dropout(x,training=self.training)
         x = self.conv2(x, edge_index)
@@ -81,7 +81,7 @@ class GPS(torch.nn.Module):
         x_pe = self.pe_norm(pe)
         x = torch.cat((self.nn1(x), self.pe_lin(x_pe)), 1)
         x = self.activation(self.conv1(x, edge_index))
-        x = F.dropout(x, training= self.training)
+        # x = F.dropout(x, training= self.training)
         #x = self.activation(self.convh(x,edge_index))
         #x = F.dropout(x,training=self.training)
         x = self.conv2(x, edge_index)
@@ -114,7 +114,7 @@ class SAGE(torch.nn.Module):
         Runs forward propagation
         """
         x = self.activation(self.conv1(x, edge_index))
-        x = F.dropout(x, training= self.training)
+        # x = F.dropout(x, training= self.training)
         #x = self.activation(self.convh(x,edge_index))
         #x = F.dropout(x,training=self.training)
         x = self.conv2(x, edge_index)
@@ -146,7 +146,7 @@ class GAT(torch.nn.Module):
         Runs forward propagation
         """
         x = self.activation(self.conv1(x, edge_index))
-        x = F.dropout(x, training= self.training)
+        # x = F.dropout(x, training= self.training)
         #x = self.activation(self.convh(x,edge_index))
         #x = F.dropout(x,training=self.training)
         x = self.conv2(x, edge_index)
@@ -188,7 +188,7 @@ class TopGCN(torch.nn.Module):
         Runs forward propagation
         """
         x = self.activation(self.conv1(x))
-        x = F.dropout(x, training= self.training)
+        # x = F.dropout(x, training= self.training)
         #x = self.activation(self.convh(x,edge_index))
         #x = F.dropout(x,training=self.training)
         x = self.conv2(x, edge_index)
@@ -220,25 +220,3 @@ class NN(torch.nn.Module):
     def string():
         return "NN"
 
-class GCNModified(nn.Module):
-    """
-    This is a GCN that only applies graph convolutions
-    where specified
-    """
-    def __init__(self,in_feat,hid_feat,out_feat, l1_conv,l2_conv):
-        super().__init__()
-        self.conv1 = DenseGCNConv(in_feat,hid_feat)
-        self.conv2 = DenseGCNConv(hid_feat,out_feat)
-
-        self.l1_conv = l1_conv
-        self.l2_conv = l2_conv
-        self.activation = nn.ReLU()
-        self.final_activation = nn.Sigmoid()
-    def forward(self, feat, adj):
-        """
-        Performs one round of forward propagation
-        """
-        x = self.activation(self.conv1(feat,torch.linalg.matrix_power(adj,self.l1_conv)))
-        x = nn.functional.dropout(x,.5)
-        x = self.final_activation(self.conv2(x,torch.linalg.matrix_power(adj,self.l2_conv)))
-        return x
