@@ -12,7 +12,7 @@ import  matplotlib.pyplot as plt
 import torch.nn.functional as F
 import torch
 
-class b(torch_geometric.nn.MessagePassing):
+class GenericMessagePassing(torch_geometric.nn.MessagePassing):
     def forward(self,x,edge_index):
         return self.propagate(edge_index,x=x)
 
@@ -30,7 +30,7 @@ class GCN(torch.nn.Module):
         self.conv2 = GCNConv(hid_feat, out_feat)
         self.activation = nn.ReLU()
         self.log_soft = log_soft
-        self.propagate = b()
+        self.propagate = GenericMessagePassing()
         #self.dropout = nn.Dropout(p=.4)
 
     def forward(self, x,edge_index,pe=None):

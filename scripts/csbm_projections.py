@@ -175,21 +175,28 @@ def hSBM(n_nodes_per_subclass, intra_subclass_prob, inter_subclass_prob, intercl
         subclass_features = []
         for i in range(n_subclasses):
             theta = 2 * np.pi * i / n_subclasses
-            x = main_class_mean[0] + distance * np.cos(theta)
-            y = main_class_mean[1] + distance * np.sin(theta)
-            subclass_features.append([x, y])
+            mean = np.zeros(10)
+            mean[0] = main_class_mean[0] + distance * np.cos(theta)
+            mean[1] = main_class_mean[1] + distance * np.sin(theta)
+            subclass_features.append(mean)
         return subclass_features
     
     # Containers for features and labels
     features = []
     labels = []
-    main_class_mean  = np.random.normal(0,1/10,(10))
-    while np.linalg.norm(main_class_mean) ==0:
-        main_class_mean = np.random.normal(0,1/10,(10))
+    main_class_mean  = np.zeros(10)
+    main_class_mean[0] = 1
     main_class_mean = mu*main_class_mean/np.linalg.norm(main_class_mean)
 
     main_class_means = [main_class_mean,-main_class_mean]
     subclass_means = generate_subclass_features(main_class_means)
+    random_rotation_matrix = np.zeros((10,10))
+    v1 = np.random.normal(0,1,10)
+    v1 = v1 / np.linalg.norm(v1)
+    v2 = np.random.normal(0,1,10)
+    v2 = v2 / np.linalg.norm(v2)
+    random_rotation_matrix[:,0] = v1
+    random_rotation_matrix[:,1] = v2
     a = 0
     # Generate nodes and features for each subclass
     for main_class_id, main_class_mean in enumerate(main_class_means):
@@ -199,7 +206,7 @@ def hSBM(n_nodes_per_subclass, intra_subclass_prob, inter_subclass_prob, intercl
                 a+=1
                 # Generate noisy feature for the node
                 feature = np.random.normal(loc=subclass_mean, scale=.2, size=10)
-                features.append(feature)
+                features.append(random_rotation_matrix@feature)
                 labels.append(main_class_id)
                 node_id = len(features) - 1
                 G.add_node(node_id, feature=feature, main_class=main_class_id, subclass=subclass_id)
