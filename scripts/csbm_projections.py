@@ -175,7 +175,7 @@ def hSBM(n_nodes_per_subclass, intra_subclass_prob, inter_subclass_prob, intercl
         subclass_features = []
         for i in range(n_subclasses):
             theta = 2 * np.pi * i / n_subclasses
-            mean = np.zeros(10)
+            mean = np.zeros(2)
             mean[0] = main_class_mean[0] + distance * np.cos(theta)
             mean[1] = main_class_mean[1] + distance * np.sin(theta)
             subclass_features.append(mean)
@@ -190,22 +190,23 @@ def hSBM(n_nodes_per_subclass, intra_subclass_prob, inter_subclass_prob, intercl
 
     main_class_means = [main_class_mean,-main_class_mean]
     subclass_means = generate_subclass_features(main_class_means)
-    random_rotation_matrix = np.zeros((10,10))
-    v1 = np.random.normal(0,1,10)
+    
+    # This is for randomly rotating it in high dimensional space
+    random_rotation_matrix = np.zeros((10,2))
+    v1 = np.random.normal(0,1,2)
     v1 = v1 / np.linalg.norm(v1)
-    v2 = np.random.normal(0,1,10)
+    v2 = np.random.normal(0,1,2)
     v2 = v2 / np.linalg.norm(v2)
     random_rotation_matrix[:,0] = v1
     random_rotation_matrix[:,1] = v2
-    a = 0
+    
     # Generate nodes and features for each subclass
     for main_class_id, main_class_mean in enumerate(main_class_means):
         for subclass_id, subclass_mean_ in enumerate(subclass_means):
             for _ in range(n_nodes_per_subclass):
                 subclass_mean = subclass_mean_[main_class_id]
-                a+=1
                 # Generate noisy feature for the node
-                feature = np.random.normal(loc=subclass_mean, scale=.2, size=10)
+                feature = np.random.normal(loc=subclass_mean, scale=.2, size=2)
                 features.append(random_rotation_matrix@feature)
                 labels.append(main_class_id)
                 node_id = len(features) - 1
