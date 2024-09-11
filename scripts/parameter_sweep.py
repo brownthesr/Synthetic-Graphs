@@ -1,4 +1,7 @@
 import sys
+import os
+folder2_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(folder2_path)
 from copy import deepcopy
 import numpy as np
 import torch
@@ -19,6 +22,7 @@ from torch_geometric.loader import DataLoader
 from src.Graph_transformer.data import *
 from itertools import permutations
 from sklearn.cluster import SpectralClustering
+
 
 def accuracy(preds,labels):
     """

@@ -15,4 +15,4 @@ export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
 
 # LOAD MODULES, INSERT CODE, AND RUN YOUR PROGRAMS HERE 
 source activate geo
-python3 -u generate_data_organized.py --comp_id $SLURM_ARRAY_TASK_ID --degree_corrected True --models "GPS" "GraphTransformer" "GCN" "GAT" "SAGE"
+python3 -u scripts/parameter_sweep.py --comp_id $SLURM_ARRAY_TASK_ID --degree_corrected True -models "GCN" 
