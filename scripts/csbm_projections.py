@@ -571,13 +571,15 @@ def scramble_feat(feats, labels, num_classes):
         num_feats = len(current_feat[0])
         num_nodes = len(current_feat)
         mean_list = np.mean(current_feat, axis=0)
-        std_list = np.std(current_feat,axis = 0)
+        # std_list = np.std(current_feat,axis = 0)
+        cov_ma = np.cov(current_feat, rowvar=False)
 
-        new_feats = np.random.normal(mean_list,std_list, (num_nodes,num_feats))
+        new_feats = np.random.multivariate_normal(mean_list,cov_ma,size=num_nodes)
+        # new_feats = np.random.normal(mean_list,std_list, (num_nodes,num_feats))
         feats[mask] = new_feats
     return torch.Tensor(feats)
 
-def run_dataset(name,t,mu,model_type):
+def run_dataset(name, t, mu, model_type, num_test=1000, num_val=500, num_train_per_class= 100):
     """Generates the dataset and model to be trained
 
     Args:
@@ -591,39 +593,39 @@ def run_dataset(name,t,mu,model_type):
     """
 
     if name == "Cora" or name == "DBLP" or name == "Citeseer" or name == "Pubmed":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = CitationFull(root=f'/tmp/{name}', name=name,transform = transform)
     elif name == "Computers" or name == "Photo":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = Amazon(root=f'/tmp/{name}', name=name,transform = transform)
     elif name == "Flickr":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = Flickr(root=f'/tmp/{name}',transform = transform)
     elif name == "Yelp":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = Yelp(root=f'/tmp/{name}',transform = transform)
     elif name == "IMDB":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = IMDB(root=f'/tmp/{name}',transform = transform)
     elif name == "GitHub":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = GitHub(root=f'/tmp/{name}',transform = transform)
     elif name == "FacebookPagePage":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = FacebookPagePage(root=f'/tmp/{name}',transform = transform)
     elif name == "LastFMAsia":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = LastFMAsia(root=f'/tmp/{name}',transform = transform)
     elif name == "DeezerEurope":
-        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = 20, num_val=1000, num_test=1000),
+        transform = T.Compose([T.RandomNodeSplit(split="random", num_train_per_class = num_train_per_class, num_val=num_val, num_test=num_test),
             T.TargetIndegree(),])
         dataset = DeezerEurope(root=f'/tmp/{name}',transform = transform)
     elif name == "Epsilon":
@@ -718,6 +720,41 @@ def run_dataset(name,t,mu,model_type):
             model = model.cuda()
         scrambled = assess(False,model,optimizer,data)
         return normal,scrambled
+    elif model_type == "GPS":
+        model = model_type(data.num_features, 32, dataset.num_classes)
+        if lr is None:
+            lr = .01
+        optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
+        transform = T.AddRandomWalkPE(walk_length=20, attr_name='pe')
+        data = transform(data)
+        if device=='cuda':
+            print(device)
+            data = data.cuda()
+            model = model.cuda()
+        normal = assess(False,model,optimizer,data)
+
+        data = data.cpu()
+        np_edge_data = data.edge_index.T.numpy()
+        np_edge_data = np_edge_data.T
+        data.edge_index = torch.tensor(np_edge_data).long()
+        if t == "both":
+            data.x = scramble_feat(data.x,data.y,dataset.num_classes)
+            data.edge_index = scramble_edges(data.edge_index,data.y,torch.arange(data.num_nodes),dataset.num_classes,dataset)
+        elif t == "edges":
+            data.edge_index = scramble_edges(data.edge_index,data.y,torch.arange(data.num_nodes),dataset.num_classes,dataset)
+        elif t == "feats":
+            data.x = scramble_feat(data.x,data.y,dataset.num_classes)
+        data = transform(data)
+        
+        model = model_type(data.num_features, 32, dataset.num_classes)
+        if lr is None:
+            lr = .01
+        optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
+        if device=='cuda':
+            data = data.cuda()
+            model = model.cuda()
+        scrambled = assess(False,model,optimizer,data)
+        return normal, scrambled
     else:
         model = GraphTransformer(in_size = data.num_features,
                                     num_class=dataset.num_classes,
@@ -800,13 +837,13 @@ for model in models:
                 li = []
                 # Loop through mu to get a range
                 for mu in tqdm(np.linspace(0,1,20)):
-                    normal_avg = 0
-                    scrambled_avg = 0
+                    normal_avg = []
+                    scrambled_avg = []
                     for j in range(runs):
                         normal,scrambled = run_dataset(a,t,mu,model)
-                        normal_avg += normal/runs
-                        scrambled_avg += scrambled/runs
-                    li.append([(normal_avg),(scrambled_avg),mu])
+                        normal_avg.append(normal)
+                        scrambled_avg.append(scrambled)
+                    li.append([np.mean(normal_avg),np.mean(scrambled_avg),mu])
                     print(f"Finished with dataset {a} {mu} {normal_avg} {scrambled_avg}")
                 np.savetxt(f"{a}_sbm_{model}_{t}.txt",np.array(li))
         else:
@@ -814,12 +851,12 @@ for model in models:
             # Loop through every dataset
             for i,a in enumerate(datasets):
                 #take the average over several runs
-                normal_avg = 0
-                scrambled_avg = 0
+                normal_avg = []
+                scrambled_avg = []
                 for j in range(runs):
                     normal,scrambled = run_dataset(a,t,0,model)
-                    normal_avg += normal/runs
-                    scrambled_avg += scrambled/runs
-                li.append([(normal_avg),(scrambled_avg)])
+                    normal_avg.append(normal)
+                    scrambled_avg.append(scrambled)
+                li.append([np.mean(normal_avg),np.mean(scrambled_avg)])
                 print(f"Finished with dataset {0} {normal_avg} {scrambled_avg}")
             np.savetxt(f"benchmarks_{model}.txt",np.array(li))

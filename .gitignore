@@ -14,3 +14,4 @@ work_bench.py
 runs/*
 lit_search.txt
 Notes.txt
+*.out
