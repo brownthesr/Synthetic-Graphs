@@ -21,5 +21,6 @@ sns.lineplot(x=[0,1],y=[0,1],ax = plot.axes[0,1],color="grey",alpha=0.5,linestyl
 sns.lineplot(x=[0,1],y=[0,1],ax = plot.axes[0,2],color="grey",alpha=0.5,linestyle="--")
 # plt.xlim(-0.01,1.01)
 # plt.ylim(-.01,1.01)
+plt.savefig("here.png")
 plt.show()
 

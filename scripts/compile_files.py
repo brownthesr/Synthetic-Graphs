@@ -1,8 +1,12 @@
 import pandas as pd
+import sys
+import os
 
 li = []
 models=["GPS","Graph_transformer","GAT","GCN","SAGE"]
-for num_classes in [2]:
+# models = ["GCN", "GAT","SAGE"]
+print()
+for num_classes in [7,5,3,2]:
     for degree_corrected in [True]:
         for type_of_model in models:
             df = pd.DataFrame()
@@ -14,7 +18,7 @@ for num_classes in [2]:
                         li.append(i)
                 df = pd.concat([df,new_data],ignore_index=True)
                 # print(df)
-            file_name = f"compiled_maxes/{num_classes}_{type_of_model}.txt" if not degree_corrected else f"compiled_maxes/{num_classes}_DC2_{type_of_model}.txt"
+            file_name = f"compiled_maxes/{num_classes}_{type_of_model}.txt" if not degree_corrected else f"compiled_maxes/{num_classes}_DC_{type_of_model}.txt"
             df.to_csv(file_name,sep=" ",header=None,index=False)
             print(f"Wrote to {type_of_model} with a class size of {num_classes} and degree corrected: {degree_corrected}")
             print(li)

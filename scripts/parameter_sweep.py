@@ -120,10 +120,65 @@ def train_GPS(model,optimizer,dataset):
         train_loss.backward()
         optimizer.step()
         
-def get_data(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes):
-    return get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes),get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes)
+def get_data(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes, ret_adj=False):
+    return get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes, ret_adj),get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes, ret_adj)
 
-def get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes):
+def generate_dcbm(num_nodes,num_classes,p_intra,p_inter,avg_degree,gamma,community = None):
+    """This Generates a Degree Corrected Stochastic Block Model
+
+    Args:
+        num_nodes (int): number of nodes
+        num_classes (int): number of classes
+        p_intra (float): probability of intra-class connection
+        p_inter (float): probability of inter class dimensions
+        avg_degree (int): average degree of network
+        gamma (float): power law degree
+        community (list, optional): A list of the community structure. Defaults to None.
+
+    Returns:
+        list: the adjacency matrix with the corrosponding communities
+    """
+    if community is None:
+        # assign a community to each node
+        community = np.repeat(list(range(num_classes)),np.ceil(num_nodes/num_classes))
+
+        #np.repeat(list to iterate over, how many times to repeat an item)
+
+        #make sure community has size n
+        community = community[0:num_nodes]
+        # just in case repeat repeated too many
+
+    communities = community.copy()
+
+    # make it a collumn vector
+    community = np.expand_dims(community,1)
+
+    # generate a boolean matrix indicating whether
+    # two nodes share a community
+    # this is a smart way to generate a section graph
+    intra = community == community.T
+    inter = community != community.T# we can also use np.logical not
+
+    random = np.random.random((num_nodes,num_nodes))
+    tri = np.tri(num_nodes,k=-1).astype(bool)
+
+    degrees,degree_distr = generate_power_distr(num_nodes,gamma)
+    fatness = avg_degree/(degree_distr@(np.arange(num_nodes)+1))
+    p_inter = p_inter/avg_degree*degrees*fatness
+    p_intra = p_intra/avg_degree*degrees*fatness
+
+    intergraph = (random < p_intra.numpy()) * intra * tri
+    # this creates a matrix that only has trues where
+    # random< p_intra, they are in intra, and along half the matrix
+    # (if it were the whole matrix it would be double the edges we want)
+    intragraph = (random < p_inter.numpy()) * inter * tri# same thing here
+    graph = np.logical_or(intergraph,intragraph)
+    graph = graph*1# this converts it to a int tensor
+    graph += graph.T
+    return graph,communities
+
+
+def get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected, num_classes, ret_adj=False):
     c_in = average_degree+lamb*np.sqrt(average_degree) # c_in/c_out as described in the equations
     c_out = average_degree-lamb*np.sqrt(average_degree)
     p_in = c_in/num_nodes # compiles these to pass into the SSBM
@@ -135,8 +190,13 @@ def get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected
     # Generate block probabilities
     p_matrix = np.full((num_classes, num_classes), p_out)
     np.fill_diagonal(p_matrix, p_in)
-    # Generate SBM graph
-    sbm_graph = nx.stochastic_block_model(block_sizes, p_matrix).to_directed()
+    
+    if degree_corrected:
+        adj, communities = generate_dcbm(num_nodes, num_classes, p_in, p_out, average_degree, gamma = 2.5)
+        sbm_graph = nx.from_numpy_array(adj).to_directed()
+    else:
+        # Generate SBM graph
+        sbm_graph = nx.stochastic_block_model(block_sizes, p_matrix).to_directed()
     edge_list = torch.tensor(list(sbm_graph.edges()), dtype=torch.long).t()
     n = class_size * num_classes
     labels = torch.arange(num_classes).repeat_interleave(class_size)
@@ -144,8 +204,10 @@ def get_csbm(num_nodes, num_features, average_degree, mu, lamb, degree_corrected
     features = torch.randn((n,num_features))
     features[torch.arange(n),labels] += mu
     
-    
-    return edge_list, features, labels
+    if not ret_adj:
+        return edge_list, features, labels
+    else:
+        return torch.Tensor(nx.to_numpy_array(sbm_graph)), features, labels
     
 parser = argparse.ArgumentParser()
 parser.add_argument("--comp_id", type=int,default=0, help= "This is the index of the parralelization, basically it tells us what mu to run")
@@ -265,3 +327,47 @@ for model_type in models:
                     sample_accs.append(accuracy(torch.argmax(out,dim=-1),test_dataset[2].to(args.device)))
                 print(max(sample_accs),lamb,mu)
                 store_acc(max(sample_accs),lamb,mu,model_type,args.num_classes)
+    elif model_type == NN:
+        # Loop through the Lambda and Mu parameters
+        for mu in mu_range:
+            # We define a list of sample accuracies and take the best of n runs
+            sample_accs = []
+            for run in range(args.runs):
+                # Get the dataset
+                train_dataset, test_dataset = get_data(num_nodes=args.num_nodes, num_features=args.num_features, 
+                                                        average_degree=args.average_degree, mu=mu, lamb=lamb, 
+                                                        degree_corrected=args.degree_corrected, num_classes=args.num_classes)
+                # Get the model and optimizer
+                model = model_type(args.num_features, args.hidden_features, args.num_classes)
+                optimizer = torch.optim.Adam(params=model.parameters(), lr = args.lr)
+                
+                # Set the model to the current device (hopefully cuda)
+                model = model.to(args.device)
+                
+                # Train the model
+                train_model(model,optimizer,train_dataset)
+                
+                # Append the accuracy
+                sample_accs.append(accuracy(torch.argmax(model(test_dataset[1].to(args.device),test_dataset[0].to(args.device)),dim=-1),test_dataset[2].to(args.device)))
+            print(max(sample_accs),lamb,mu)
+            store_acc(max(sample_accs),lamb,mu,model_type,args.num_classes)
+    elif model_type is Spectral:
+        for lamb in tqdm(lambda_range):
+            accs = []
+            for run in range(args.runs):
+                model = SpectralClustering(args.num_classes, affinity = "precomputed")
+                train_dataset, test_dataset = get_data(num_nodes=args.num_nodes, num_features=args.num_features, 
+                                                        average_degree=args.average_degree, mu=0, lamb=lamb, 
+                                                        degree_corrected=args.degree_corrected, num_classes=args.num_classes,ret_adj=True)
+                test_adj, test_mask, test_labels = test_dataset
+                model.fit(test_adj)
+                out = model.labels_
+                possible_labels = np.arange(args.num_classes)
+                accuracies = []
+                for curr_label in permutations(possible_labels):
+                    perm = np.array(curr_label)
+                    acc1 = accuracy(out,perm[test_labels])
+                    accuracies.append(acc1)
+                partial_acc = np.max(accuracies)
+                accs.append(partial_acc)
+            store_acc(max(accs),lamb,0,model_type,args.num_classes)

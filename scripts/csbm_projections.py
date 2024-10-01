@@ -6,15 +6,15 @@ from torch_geometric.datasets import CitationFull,Amazon,Flickr,Yelp,IMDB,GitHub
 import pandas as pd
 from torch_geometric.loader import DataLoader
 
-### Dustin Addition
 import sys
 import os
-sys.path.append(os.path.abspath("/home/xiao/Desktop/GNN/Synthetic-Graphs-main"))
-### end Dustin Addition
+folder2_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(folder2_path)
 
 from src.Graph_transformer.data import *
+from src.models import *
 import networkx as nx
-from torch_geometric.nn import GCNConv,SAGEConv,GATConv
+from torch_geometric.nn import GCNConv,SAGEConv,GATConv, GPSConv
 from matplotlib import pyplot as plt
 from src.Graph_transformer.models import *
 import torch.nn as nn
@@ -80,7 +80,7 @@ def train_transformer(data,optimizer,model,mask):
         train_loss.backward()
         optimizer.step()
 
-def assess(read = True,model=None,optimizer = None,data = None,twice = False,transformer = False):
+def assess(read = True,model=None,optimizer = None,data = None,twice = False,transformer = False, pe=None):
     """Performs both training and test loops for our models
     
         Parameters
@@ -96,7 +96,10 @@ def assess(read = True,model=None,optimizer = None,data = None,twice = False,tra
         model.train()# tells our model we are about to train
         for epoch in range(200+200*twice):# runs through all the data 200 times
             optimizer.zero_grad()
-            out = model(data.x,data.edge_index)
+            if pe is None:
+                out = model(data.x,data.edge_index)
+            else:
+                out = model(data.x, data.edge_index, pe)
             data.y = data.y.reshape(-1)
             train_loss = F.nll_loss(out[data.train_mask], data.y[data.train_mask])
             train_acc = accuracy(out.max(1)[1], data.train_mask,data)
@@ -110,7 +113,10 @@ def assess(read = True,model=None,optimizer = None,data = None,twice = False,tra
             train_loss.backward()
             optimizer.step()
         model.eval()
-        preds = model(data.x,data.edge_index).max(1)[1]
+        if pe is None:
+            preds = model(data.x,data.edge_index).max(1)[1]
+        else:
+            preds = model(data.x,data.edge_index, pe).max(1)[1]
         acc = accuracy(preds,data.test_mask,data)
         # print("testing accuracy:",acc)
         return acc
@@ -143,8 +149,8 @@ def assess(read = True,model=None,optimizer = None,data = None,twice = False,tra
         for test_batch in train_loader:
             if device=='gpu':
                 test_batch.cuda()
-            print("1 iteration DELETE ME")
             preds = model(test_batch).max(1)[1]
+            data.y = data.y.squeeze()
             acc = accuracy(preds,data.test_mask,data)
         # print(acc)
         return acc
@@ -174,11 +180,15 @@ def hSBM(n_nodes_per_subclass, intra_subclass_prob, inter_subclass_prob, intercl
         # Generate features for subclasses forming a pentagon around the main class
         subclass_features = []
         for i in range(n_subclasses):
-            theta = 2 * np.pi * i / n_subclasses
-            mean = np.zeros(2)
-            mean[0] = main_class_mean[0] + distance * np.cos(theta)
-            mean[1] = main_class_mean[1] + distance * np.sin(theta)
-            subclass_features.append(mean)
+            subclasses = []
+            for k in range(len(main_class_mean)):
+                theta = 2 * np.pi * i / n_subclasses
+                mean = np.zeros(2)
+                print(main_class_mean[0] + distance * np.cos(theta))
+                mean[0] = main_class_mean[k] + distance * np.cos(theta)
+                mean[1] = 0 + distance * np.sin(theta)
+                subclasses.append(mean)
+            subclass_features.append(subclasses)
         return subclass_features
     
     # Containers for features and labels
@@ -186,16 +196,16 @@ def hSBM(n_nodes_per_subclass, intra_subclass_prob, inter_subclass_prob, intercl
     labels = []
     main_class_mean  = np.zeros(10)
     main_class_mean[0] = 1
-    main_class_mean = mu*main_class_mean/np.linalg.norm(main_class_mean)
+    main_class_mean = mu
 
     main_class_means = [main_class_mean,-main_class_mean]
     subclass_means = generate_subclass_features(main_class_means)
     
     # This is for randomly rotating it in high dimensional space
     random_rotation_matrix = np.zeros((10,2))
-    v1 = np.random.normal(0,1,2)
+    v1 = np.random.normal(0,1,10)
     v1 = v1 / np.linalg.norm(v1)
-    v2 = np.random.normal(0,1,2)
+    v2 = np.random.normal(0,1,10)
     v2 = v2 / np.linalg.norm(v2)
     random_rotation_matrix[:,0] = v1
     random_rotation_matrix[:,1] = v2
@@ -686,7 +696,7 @@ def run_dataset(name, t, mu, model_type, num_test=1000, num_val=500, num_train_p
     data = dataset[0]
     data.y = data.y.reshape(-1)
     # print(data.y)
-    if not is_transformer:
+    if model_type != "GPS" and model_type != "GraphTransformer":
         if name != "Synthetic":
             model = GNN(data.num_features,32,dataset.num_classes,model_type)
         else:
@@ -721,9 +731,8 @@ def run_dataset(name, t, mu, model_type, num_test=1000, num_val=500, num_train_p
         scrambled = assess(False,model,optimizer,data)
         return normal,scrambled
     elif model_type == "GPS":
-        model = model_type(data.num_features, 32, dataset.num_classes)
-        if lr is None:
-            lr = .01
+        model = eval(model_type)(data.num_features, 32, dataset.num_classes)
+        lr = .01
         optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
         transform = T.AddRandomWalkPE(walk_length=20, attr_name='pe')
         data = transform(data)
@@ -731,7 +740,7 @@ def run_dataset(name, t, mu, model_type, num_test=1000, num_val=500, num_train_p
             print(device)
             data = data.cuda()
             model = model.cuda()
-        normal = assess(False,model,optimizer,data)
+        normal = assess(False,model,optimizer,data,pe = data.pe)
 
         data = data.cpu()
         np_edge_data = data.edge_index.T.numpy()
@@ -746,14 +755,14 @@ def run_dataset(name, t, mu, model_type, num_test=1000, num_val=500, num_train_p
             data.x = scramble_feat(data.x,data.y,dataset.num_classes)
         data = transform(data)
         
-        model = model_type(data.num_features, 32, dataset.num_classes)
+        model = eval(model_type)(data.num_features, 32, dataset.num_classes)
         if lr is None:
             lr = .01
         optimizer = torch.optim.Adam(params=model.parameters(),lr = lr)
         if device=='cuda':
             data = data.cuda()
             model = model.cuda()
-        scrambled = assess(False,model,optimizer,data)
+        scrambled = assess(False,model,optimizer,data, pe = data.pe)
         return normal, scrambled
     else:
         model = GraphTransformer(in_size = data.num_features,
@@ -815,7 +824,7 @@ def run_dataset(name, t, mu, model_type, num_test=1000, num_val=500, num_train_p
 
 # Synthetic datasets implemented
 # "Triadic","Heirarchical","Epsilon"
-datasets = ["Triadic", "Heirarchical","Epsilon"]
+datasets = ["Heirarchical"]
 # Specify if you are wanting to use the synthetic datasets
 is_synthetic = True 
 
@@ -823,8 +832,8 @@ is_synthetic = True
 is_transformer = False
 
 runs = 10
-typ = ["edges","features", "both"]
-models = ["SAGE","GAT","GCN"]
+typ = ["edges", "both", "features"]
+models = ["GraphTransformer", "GPS", "GCN", "SAGE", "GAT"]
 
 # Loop through and store any variants of models that we want
 for model in models:
@@ -844,7 +853,7 @@ for model in models:
                         normal_avg.append(normal)
                         scrambled_avg.append(scrambled)
                     li.append([np.mean(normal_avg),np.mean(scrambled_avg),mu])
-                    print(f"Finished with dataset {a} {mu} {normal_avg} {scrambled_avg}")
+                    print(f"Finished with dataset {a} {mu} {normal_avg} {scrambled_avg}, {model}")
                 np.savetxt(f"{a}_sbm_{model}_{t}.txt",np.array(li))
         else:
             li = []

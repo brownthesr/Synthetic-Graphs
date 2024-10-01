@@ -13,36 +13,35 @@ from scipy.ndimage import convolve
 import seaborn as sns
 
 # We are plotting non-degree corrected data
-num_classes = 2
+num_classes = 5
 DC = False
-models = ["GCN","GAT","SAGE","Transformer"]
+models = ["GCN","GAT","SAGE","Graph_transformer","GPS"]
 sns.set()
 palette = sns.color_palette("colorblind")
 
 # Setting up the figure
 fig = plt.figure()
-gs = GridSpec(22,43)
-ax_main = [1,2,3,4]
+gs = GridSpec(22,53)
+ax_main = [1,2,3,4,5]
 ax_main[0] = fig.add_subplot(gs[0:10,0:10])
 ax_main[1] = fig.add_subplot(gs[0:10,10:20])
 ax_main[2] = fig.add_subplot(gs[0:10,20:30],sharey = ax_main[1])
 ax_main[3] = fig.add_subplot(gs[0:10,30:40],sharey = ax_main[1])
+ax_main[4] = fig.add_subplot(gs[0:10,40:50],sharey = ax_main[1])
 fig.subplots_adjust(wspace = 0,hspace=0)
 
 # Looping through all the models
 for p,model in enumerate(models):
     # Loading the data
-    f2 = f"data/maxed_runs/{num_classes}_NN.txt"
+    f2 = f"compiled_maxes/{num_classes}_NN.txt"
     if DC:
-        f1 = f"data/maxed_runs/{num_classes}_DC_{model}.txt"
-        f3 = f"data/maxed_runs/{num_classes}_DC_Spectral.txt"
+        f1 = f"compiled_maxes/{num_classes}_DC_{model}.txt"
+        f3 = f"compiled_maxes/{num_classes}_DC_Spectral.txt"
     else:
-        f1 = f"data/maxed_runs/{num_classes}_{model}.txt"
-        f3 = f"data/maxed_runs/{num_classes}_Spectral.txt"
+        f1 = f"compiled_maxes/{num_classes}_{model}.txt"
+        f3 = f"compiled_maxes/{num_classes}_Spectral.txt"
 
     test_accs = np.genfromtxt(f1)
-    test_accs_nn = np.genfromtxt(f2)
-    test_accs_spectral = np.genfromtxt(f3)
 
     # obtaining the data
     z = test_accs[:,0] #accs
@@ -55,13 +54,6 @@ for p,model in enumerate(models):
     x = x.reshape(200,row_size)
     y = y.reshape(200,row_size)
 
-    NN_x = test_accs_nn[:,2]
-    NN_c = test_accs_nn[:,0]
-    NN_y = test_accs_nn[:,1]
-    S_x = test_accs_spectral[:,2]
-    S_c = test_accs_spectral[:,0]
-    S_y = test_accs_spectral[:,1]
-
     # Smoothing the data with a gaussian filter
     kernel = np.array([[1,4,7,4,1],
                     [4,16,26,16,4],
@@ -72,55 +64,58 @@ for p,model in enumerate(models):
     z = convolve(z,kernel)/kernel.sum()
 
     # Setting up titles
-    im_main = ax_main[p].scatter(x,y,c=z,cmap="coolwarm",vmin=1/2,vmax=1)
+    im_main = ax_main[p].scatter(x,y,c=z,cmap="coolwarm",vmin=1/5,vmax=1)
     ax_main[p].set_title(f"{num_classes} Class {model}")
-    ax_main[p].set_ylim(0,1)
+    ax_main[p].set_ylim(0,2)
     ax_main[0].set_xticks([])
     ax_main[0].set_ylabel("Non-Scale-Free\nFeature Information")
 
 # Setting up x and y ticks
-ax_main[0].set_yticks([0,.5,1])
+ax_main[0].set_yticks([0,1,2])
 ax_main[1].set_yticks([])
 ax_main[2].set_yticks([])
 ax_main[3].set_yticks([])
+ax_main[4].set_yticks([])
 ax_main[0].set_xticks([])
 ax_main[1].set_xticks([])
 ax_main[2].set_xticks([])
 ax_main[3].set_xticks([])
+ax_main[4].set_xticks([])
 
 # Now we are plotting the degree corrected data
 # Sets up various hyperparameters
-num_classes = 2
-DC = True
-models = ["GCN","GAT","SAGE","Transformer"]
+num_classes = 5
+# DC = True
+models = ["GCN","GAT","SAGE","Graph_transformer","GPS"]
 show_positive = False
 show_negative = False
 
 # Setting up the figure
-ax_main = [1,2,3,4]
+ax_main = [1,2,3,4,5]
 ax_main[0] = fig.add_subplot(gs[11:21,0:10])
 ax_main[1] = fig.add_subplot(gs[11:21,10:20])
 ax_main[2] = fig.add_subplot(gs[11:21,20:30],sharey = ax_main[1])
 ax_main[3] = fig.add_subplot(gs[11:21,30:40],sharey = ax_main[1])
+ax_main[4] = fig.add_subplot(gs[11:21,40:50],sharey = ax_main[1])
 fig.subplots_adjust(wspace = 0,hspace=0)
 ax_main[1].set_yticks([])
 ax_main[2].set_yticks([])
 ax_main[3].set_yticks([])
+ax_main[4].set_yticks([])
+DC=True
 
 # Looping through all the models
 for p,model in enumerate(models):
     # Loading the data
-    f2 = f"data/maxed_runs/{num_classes}_NN.txt"
+    f2 = f"compiled_maxes/{num_classes}_NN.txt"
     if DC:
-        f1 = f"data/maxed_runs/{num_classes}_DC_{model}.txt"
-        f3 = f"data/maxed_runs/{num_classes}_DC_Spectral.txt"
+        f1 = f"compiled_maxes/{num_classes}_DC_{model}.txt"
+        f3 = f"compiled_maxes/{num_classes}_DC_Spectral.txt"
     else:
-        f1 = f"data/maxed_runs/{num_classes}_{model}.txt"
-        f3 = f"data/maxed_runs/{num_classes}_Spectral.txt"
+        f1 = f"compiled_maxes/{num_classes}_{model}.txt"
+        f3 = f"compiled_maxes/{num_classes}_Spectral.txt"
 
     test_accs = np.genfromtxt(f1)
-    test_accs_nn = np.genfromtxt(f2)
-    test_accs_spectral = np.genfromtxt(f3)
     
     z = test_accs[:,0] #accs
     x = test_accs[:,1]# lambda
@@ -132,13 +127,6 @@ for p,model in enumerate(models):
     x = x.reshape(200,row_size)
     y = y.reshape(200,row_size)
 
-    NN_x = test_accs_nn[:,2]
-    NN_c = test_accs_nn[:,0]
-    NN_y = test_accs_nn[:,1]
-    S_x = test_accs_spectral[:,2]
-    S_c = test_accs_spectral[:,0]
-    S_y = test_accs_spectral[:,1]
-    
     # Smoothing the data with a gaussian filter
     kernel = np.array([[1,4,7,4,1],
                     [4,16,26,16,4],
@@ -149,15 +137,17 @@ for p,model in enumerate(models):
     z = convolve(z,kernel)/kernel.sum()
 
     # Setting up titles
-    im_main = ax_main[p].scatter(x,y,c=z,cmap="coolwarm",vmin=1/2,vmax=1)
-    colorbars = fig.add_subplot(gs[5:15,42])
+    im_main = ax_main[p].scatter(x,y,c=z,cmap="coolwarm",vmin=1/5,vmax=1)
+    colorbars = fig.add_subplot(gs[5:15,52])
     clb = plt.colorbar(im_main, ax=ax_main,cax = colorbars)
-    # clb.ax.set_title("Colorbar")
+    clb.ax.set_title("Accuracy")
     ax_main[p].set_xlabel(f"Edge Information")
-    ax_main[p].set_ylim(0,1)
+    ax_main[p].set_ylim(0,2)
     ax_main[0].set_ylabel("Scale Free\nFeature Information")
 
 # Setting the x-ticks
-ax_main[0].set_yticks([0,.5,1])
+ax_main[0].set_yticks([0,1,2])
+fig = plt.gcf()
+fig.set_size_inches(18.5, 10.5)  # Adjust the dimensions as needed
 
-plt.show()
+plt.savefig("new_architecture_compare.jpg")

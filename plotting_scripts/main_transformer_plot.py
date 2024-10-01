@@ -13,27 +13,27 @@ from scipy.ndimage import convolve
 
 # Here we plot the accuracies for the binary GCN model
 num_classes = 2
-DC = False
-model = "Transformer"
+DC = True
+model = "GCN"
 show_positive = True
 show_negative = True
 sns.set()
 palette = sns.color_palette("colorblind")
 
 # Loading the data
-f2 = f"data/maxed_runs/{num_classes}_NN.txt"
+f2 = f"compiled_maxes/{num_classes}_NN.txt"
 if DC:
-    f1 = f"data/maxed_runs/{num_classes}_DC_{model}.txt"
-    f3 = f"data/maxed_runs/{num_classes}_DC_Spectral.txt"
-    f4 = f"data/maxed_runs/{num_classes}_DC_GraphTool.txt"
+    f1 = f"compiled_maxes/{num_classes}_DC_{model}.txt"
+    f3 = f"compiled_maxes/{num_classes}_DC_Spectral.txt"
+    f4 = f"compiled_maxes/{num_classes}_DC_GraphTool.txt"
 
 else:
-    f1 = f"data/maxed_runs/{num_classes}_{model}.txt"
-    f3 = f"data/maxed_runs/{num_classes}_Spectral.txt"
-    f4 = f"data/maxed_runs/{num_classes}_GraphTool.txt"
+    f1 = f"compiled_maxes/{num_classes}_{model}.txt"
+    f3 = f"compiled_maxes/{num_classes}_Spectral.txt"
+    f4 = f"compiled_maxes/{num_classes}_GraphTool.txt"
 
 test_accs = np.genfromtxt(f1)
-test_accs_nn = np.genfromtxt(f2)
+test_accs_nn = np.zeros((200,10))#np.genfromtxt(f2)
 test_accs_spectral = np.genfromtxt(f3)
 
 z = test_accs[:,0] #accs
@@ -53,7 +53,7 @@ S_x = test_accs_spectral[:,2]
 S_c = test_accs_spectral[:,0]
 S_y = test_accs_spectral[:,1]
 
-test_accs_tool = np.genfromtxt(f4)
+test_accs_tool = np.zeros((121,10))#np.genfromtxt(f4)
 T_x = test_accs_tool[:,2]
 T_c = test_accs_tool[:,0]
 T_y = test_accs_tool[:,1]
@@ -161,11 +161,11 @@ ax_Spectral.scatter(T_y,T_x,c=T_c,cmap="coolwarm",vmin=1/2,vmax=1)
 
 # Sets x and y limits
 ax_main.set_xlim(-3.1,3.1)
-ax_main.set_ylim(0,1)
+ax_main.set_ylim(0,2)
 ax_main.set_yticks([.25,.5,.75,1])
-ax_NN.set_ylim(0,1)
+ax_NN.set_ylim(0,2)
 ax_NN.set_yticks([])
-ax_compare.set_ylim(0,1)
+ax_compare.set_ylim(0,2)
 ax_compare.set_xlim(-3.1,3.1)
 
 # Title the spectral clustering and plot negative clustering
@@ -192,4 +192,5 @@ colorbar.set_title("Key")
 ax_Spectral.set_xlabel("Edge Information")
 ax_compare.legend()
 
+plt.savefig("here.png")
 plt.show()
