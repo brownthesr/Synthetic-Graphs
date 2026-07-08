@@ -4,7 +4,8 @@ Code for studying how the **properties of training data** shape the performance,
 
 > 📄 **Publication.** This work has been **accepted to the *SIAM Journal on Applied Mathematics*** (in press, 2026):
 > *"Beyond Linear: A Theoretical and Empirical Analysis of Nonlinear GNNs for Community Detection."*
-> D. Brown, T. Garrity, K. Parker, J. Oliphant, S. Carson, C. Hanson, Z. Boyd.
+> Drake B. Brown\*, Trevor Garrity\*, Kaden Parker, Jason Oliphant, Stone Carson, Cole Hanson, Dustin Angerhofer, Zachary Evans, Xiao Li, Joseph du Toit, Zachary M. Boyd.
+> (\*equal contribution)
 
 ## Overview
 
@@ -64,7 +65,7 @@ If you use this code, please cite:
 ```bibtex
 @article{brown2026beyond,
   title   = {Beyond Linear: A Theoretical and Empirical Analysis of Nonlinear GNNs for Community Detection},
-  author  = {Brown, Drake and Garrity, T. and Parker, K. and Oliphant, J. and Carson, S. and Hanson, C. and Boyd, Zachary M.},
+  author  = {Brown, Drake B. and Garrity, Trevor and Parker, Kaden and Oliphant, Jason and Carson, Stone and Hanson, Cole and Angerhofer, Dustin and Evans, Zachary and Li, Xiao and du Toit, Joseph and Boyd, Zachary M.},
   journal = {SIAM Journal on Applied Mathematics},
   year    = {2026},
   note    = {In press}
